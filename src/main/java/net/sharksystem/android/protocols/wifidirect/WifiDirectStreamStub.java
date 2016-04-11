@@ -16,7 +16,7 @@ import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceRequest;
 import android.os.Build;
 import android.os.Handler;
 
-import net.sharkfw.knowledgeBase.ASIPSpace;
+import net.sharkfw.asip.ASIPSpace;
 import net.sharkfw.knowledgeBase.Knowledge;
 import net.sharkfw.protocols.RequestHandler;
 import net.sharkfw.protocols.StreamConnection;
@@ -190,9 +190,10 @@ public class WifiDirectStreamStub
     }
 
     @Override
-    public void offer(ASIPSpace interest) throws SharkNotSupportedException {
+    public void offer(ASIPSpace asipSpace) throws SharkNotSupportedException {
 
     }
+
 
     @Override
     public void offer(Knowledge knowledge) throws SharkNotSupportedException {
