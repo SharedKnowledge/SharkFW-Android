@@ -51,7 +51,7 @@ public class WifiDirectStreamStub
     private WifiP2pDnsSdServiceInfo _serviceInfo;
     private Map<String, String> _txtRecordMap;
 
-    private CommunicationManager _communicationManager;
+    private SharkWifiDirectManager _sharkWifiDirectManager;
     private Handler threadHandler;
     private Runnable thread;
     private int threadRuns = 0;
@@ -62,7 +62,7 @@ public class WifiDirectStreamStub
     private WifiP2pManager.Channel channel;
     private Map<String, String> txtRecordMap;
 
-    private CommunicationManager communicationManager;
+    private SharkWifiDirectManager sharkWifiDirectManager;
 
     public WifiDirectStreamStub(Context context, WeakReference<Activity> activity) {
         _context = context;
@@ -71,11 +71,11 @@ public class WifiDirectStreamStub
         _manager = (WifiP2pManager) context.getSystemService(Context.WIFI_P2P_SERVICE);
         _channel =_manager.initialize(context, context.getMainLooper(), null);
 
-        _communicationManager = CommunicationManager.getInstance();
-        _communicationManager.setStubControllerListener(this);
-        _communicationManager.setConnectionController(this);
-        _manager.setDnsSdResponseListeners(_channel, null, _communicationManager);
-        _communicationManager.onStatusChanged(WifiDirectStatus.INITIATED);
+        _sharkWifiDirectManager = SharkWifiDirectManager.getInstance(_context);
+        _sharkWifiDirectManager.setStubControllerListener(this);
+        _sharkWifiDirectManager.setConnectionController(this);
+        _manager.setDnsSdResponseListeners(_channel, null, _sharkWifiDirectManager);
+        _sharkWifiDirectManager.onStatusChanged(WifiDirectStatus.INITIATED);
 
         _intentFilter = new IntentFilter();
         _intentFilter.addAction(WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION);
@@ -141,7 +141,7 @@ public class WifiDirectStreamStub
             threadHandler.removeCallbacks(thread);
             stopServiceDiscovery();
             removeServiceAdvertiser();
-            _communicationManager.onStatusChanged(WifiDirectStatus.STOPPED);
+            _sharkWifiDirectManager.onStatusChanged(WifiDirectStatus.STOPPED);
             _isStarted=!_isStarted;
         }
     }
@@ -150,7 +150,7 @@ public class WifiDirectStreamStub
     public void start() throws IOException {
         if(!_isStarted){
             threadHandler.post(thread);
-            _communicationManager.onStatusChanged(WifiDirectStatus.DISCOVERING);
+            _sharkWifiDirectManager.onStatusChanged(WifiDirectStatus.DISCOVERING);
             _isStarted=!_isStarted;
         }
     }
@@ -233,7 +233,7 @@ public class WifiDirectStreamStub
             }
         } else if (WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION.equals(action)) {
             // Call WifiP2pManager.requestPeers() to get a list of current peers
-            _manager.requestPeers(_channel, _communicationManager);
+            _manager.requestPeers(_channel, _sharkWifiDirectManager);
         } else if (WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION.equals(action)) {
             // Respond to new connection or disconnections
             _networkInfo = (NetworkInfo) intent
@@ -251,7 +251,7 @@ public class WifiDirectStreamStub
     @Override
     public void onConnectionInfoAvailable(WifiP2pInfo info) {
         L.d("onConnectionInfoAvailable", info.toString());
-        _communicationManager.onStatusChanged(WifiDirectStatus.CONNECTED);
+        _sharkWifiDirectManager.onStatusChanged(WifiDirectStatus.CONNECTED);
     }
 
     @Override
@@ -261,17 +261,7 @@ public class WifiDirectStreamStub
         config.deviceAddress = peer.getDevice().deviceAddress;
         config.wps.setup = WpsInfo.PBC;
 
-        _manager.connect(_channel, config, new WifiP2pManager.ActionListener() {
-            @Override
-            public void onSuccess() {
-                L.d("connect", "SUCCESS");
-            }
-
-            @Override
-            public void onFailure(int reason) {
-                L.d("connect", "FAILURE");
-            }
-        });
+        _manager.connect(_channel, config, new WifiActionListener("Connect"));
     }
 
     @Override

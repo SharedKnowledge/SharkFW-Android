@@ -32,6 +32,7 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine {
 
     public AndroidSharkEngine(Activity activity) {
         super();
+        this.activateASIP();
         this.context = activity.getApplicationContext();
         this.activityRef = new WeakReference<>(activity);
     }
@@ -40,7 +41,6 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine {
      * Wifi Direct methods
      * @see net.sharkfw.peer.SharkEngine#createWifiDirectStreamStub(net.sharkfw.kep.KEPStub)
      */
-
     protected Stub createWifiDirectStreamStub(SharkStub kepStub) throws SharkProtocolNotSupportedException {
         if (currentStub == null) {
             currentStub = new WifiDirectStreamStub(context, activityRef);
@@ -51,7 +51,7 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine {
 
     @Override
     public void startWifiDirect() throws SharkProtocolNotSupportedException, IOException {
-        this.createWifiDirectStreamStub(this.getKepStub()).start();
+        this.createWifiDirectStreamStub(this.getAsipStub()).start();
     }
 
     public void stopWifiDirect() throws SharkProtocolNotSupportedException {
@@ -97,13 +97,5 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine {
         //TODO this function is called by the parent but the parent function itself look likes a big mess
         // and it does not look like it is designed to work with start/stop methods.
         return currentStub;
-    }
-
-    public void sendKnowledge(Knowledge k, PeerSemanticTag recipient, KnowledgePort kp) throws SharkSecurityException, SharkKBException, IOException {
-//        if (currentStub != null && currentStub instanceof WifiDirectStreamStub) {
-//            WifiDirectStreamStub wifiStub = (WifiDirectStreamStub) currentStub;
-//            recipient.setAddresses(new String[]{wifiStub.getConnectionStr()});
-//        }
-//        super.sendKnowledge(k, recipient, kp);
     }
 }
