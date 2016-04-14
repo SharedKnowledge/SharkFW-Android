@@ -21,6 +21,7 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine {
 
     public AndroidSharkEngine(Context context) {
         super();
+        this.activateASIP();
         this.context = context;
     }
 

@@ -21,6 +21,10 @@ import java.util.Map;
 @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
 public class SharkWifiDirectManager implements WifiP2pManager.DnsSdTxtRecordListener, WifiDirectStatus, WifiP2pManager.PeerListListener {
 
+    public interface PeerListener {
+        void onNewPeer(List<WifiDirectPeer> peers);
+    }
+
     private static SharkWifiDirectManager _instance = null;
     private List<WifiDirectPeer> _peers = new LinkedList<>();
 
@@ -110,6 +114,7 @@ public class SharkWifiDirectManager implements WifiP2pManager.DnsSdTxtRecordList
             this._peers.add(newPeer);
         }
         if(!_peers.isEmpty())
+
             _wifiDirectPeerListener.onNewPeer(_peers);
     }
 
