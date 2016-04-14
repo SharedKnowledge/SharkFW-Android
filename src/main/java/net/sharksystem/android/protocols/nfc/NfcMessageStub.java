@@ -82,7 +82,6 @@ public class NfcMessageStub implements MessageStub {
 
     @Override
     public void offer(ASIPSpace asipSpace) throws SharkNotSupportedException {
-        //TODO: mario
     }
 
     @Override
