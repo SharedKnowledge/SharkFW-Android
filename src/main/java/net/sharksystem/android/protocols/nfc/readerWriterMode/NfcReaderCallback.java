@@ -1,4 +1,4 @@
-package net.sharksystem.android.protocols.nfc.androidService;
+package net.sharksystem.android.protocols.nfc.readerWriterMode;
 
 import android.annotation.TargetApi;
 import android.nfc.NfcAdapter;
@@ -8,6 +8,7 @@ import android.os.Build;
 
 import net.sharksystem.android.protocols.nfc.OnMessageReceived;
 import net.sharksystem.android.protocols.nfc.OnMessageSend;
+
 
 /**
  * Created by mn-io on 23.01.2016.

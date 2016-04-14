@@ -18,7 +18,7 @@ public class NfcMessageSendHandler implements OnMessageSend {
 
     @Override
     public void onDeactivated(int reason) {
-
+        //TODO: clear buffer here? or restore full buffer if not empty yet?
     }
 
     @Override

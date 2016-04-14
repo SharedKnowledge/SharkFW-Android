@@ -7,9 +7,9 @@ import android.os.Bundle;
 
 import net.sharksystem.android.protocols.nfc.OnMessageReceived;
 import net.sharksystem.android.protocols.nfc.OnMessageSend;
+import net.sharksystem.android.protocols.nfc.readerWriterMode.IsoDepTransceiver;
 
 import java.util.Arrays;
-
 
 /**
  * Created by mn-io on 22.01.16.

@@ -24,6 +24,11 @@ public class NfcMessageStub implements MessageStub {
 
     public static final String SMART_CARD_IDENTIFIER = "SHARK NFC";
 
+    public static final String EXCEPTION_NFC_NOT_SUPOORTED = "NFC is not supported by device";
+    public static final String EXCEPTION_NFC_ANDROID_TOO_OLD = "NFC implementation requires at least android KITKAT API %2$d - Device API is %1$d";
+    public static final String EXCEPTION_NFC_NOT_ENABLED = "NFC is not enabled in system settings";
+    public static final String EXCEPTION_NFC_NO_ACTIVITY = "NFC needs an activity to bind to";
+
     private final NfcAdapter nfcAdapter;
     private final WeakReference<Activity> activity;
     private final NfcMessageReceivedHandler receivedRequestHandler;
@@ -31,10 +36,22 @@ public class NfcMessageStub implements MessageStub {
     private boolean isStarted = false;
 
     public NfcMessageStub(Context context, WeakReference<Activity> activity) throws SharkProtocolNotSupportedException {
+        if (activity == null || activity.get() == null) {
+            throw new IllegalStateException(EXCEPTION_NFC_NO_ACTIVITY);
+        }
+
         this.activity = activity;
         this.nfcAdapter = NfcAdapter.getDefaultAdapter(context);
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.KITKAT) {
+            String msg = String.format(EXCEPTION_NFC_ANDROID_TOO_OLD, Build.VERSION.SDK_INT, Build.VERSION_CODES.KITKAT);
+            throw new SharkProtocolNotSupportedException(msg);
+        }
         if (this.nfcAdapter == null) {
-            throw new SharkProtocolNotSupportedException("NFC is not supported");
+            throw new SharkProtocolNotSupportedException(EXCEPTION_NFC_NOT_SUPOORTED);
+        }
+        if (!nfcAdapter.isEnabled()) {
+            throw new IllegalStateException(EXCEPTION_NFC_NOT_ENABLED);
         }
 
         receivedRequestHandler = new NfcMessageReceivedHandler(this);
@@ -48,13 +65,13 @@ public class NfcMessageStub implements MessageStub {
 
     @Override
     public void stop() {
-        NfcAdapterHelper.prepareSending(SMART_CARD_IDENTIFIER, activity.get(), sendRequestHandler, receivedRequestHandler);
+        NfcAdapterHelper.actAsSmartCard(SMART_CARD_IDENTIFIER, activity.get(), sendRequestHandler, receivedRequestHandler);
         isStarted = false;
     }
 
     @Override
     public void start() {
-        NfcAdapterHelper.prepareReceiving(SMART_CARD_IDENTIFIER, activity.get(), sendRequestHandler, receivedRequestHandler);
+        NfcAdapterHelper.actAsNfcReaderWriter(SMART_CARD_IDENTIFIER, activity.get(), sendRequestHandler, receivedRequestHandler);
         isStarted = true;
     }
 
@@ -65,7 +82,7 @@ public class NfcMessageStub implements MessageStub {
 
     @Override
     public void offer(ASIPSpace asipSpace) throws SharkNotSupportedException {
-
+        //TODO: mario
     }
 
     @Override

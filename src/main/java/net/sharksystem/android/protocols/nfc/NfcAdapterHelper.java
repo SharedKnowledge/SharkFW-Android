@@ -5,8 +5,9 @@ import android.app.Activity;
 import android.nfc.NfcAdapter;
 import android.os.Build;
 
-import net.sharksystem.android.protocols.nfc.androidService.NfcReaderCallback;
 import net.sharksystem.android.protocols.nfc.androidService.SmartCardEmulationService;
+import net.sharksystem.android.protocols.nfc.readerWriterMode.NfcReaderCallback;
+
 
 /**
  * Created by mn-io on 23.01.2016.
@@ -21,7 +22,7 @@ public class NfcAdapterHelper {
      * Technically this device is actively trying to detect devices by electromagnetic induction,
      * which means it is "sending" energy in order to activate passive devices.
      */
-    public static void prepareReceiving(String smartCardIdentifier, Activity activity, OnMessageSend src, OnMessageReceived dst) {
+    public static void actAsNfcReaderWriter(String smartCardIdentifier, Activity activity, OnMessageSend src, OnMessageReceived dst) {
         if (activity.isDestroyed()) {
             return;
         }
@@ -34,7 +35,7 @@ public class NfcAdapterHelper {
      * NFC acts as a passive SmartCard, which contains data to send.
      * Technically this device is waiting to receive energy by electromagnetic induction.
      */
-    public static void prepareSending(String smartCardIdentifier, Activity activity, OnMessageSend src, OnMessageReceived dst) {
+    public static void actAsSmartCard(String smartCardIdentifier, Activity activity, OnMessageSend src, OnMessageReceived dst) {
         if (activity.isDestroyed()) {
             return;
         }

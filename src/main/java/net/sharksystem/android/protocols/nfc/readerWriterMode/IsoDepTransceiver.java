@@ -1,4 +1,4 @@
-package net.sharksystem.android.protocols.nfc.androidService;
+package net.sharksystem.android.protocols.nfc.readerWriterMode;
 
 import android.nfc.Tag;
 import android.nfc.TagLostException;
@@ -6,9 +6,11 @@ import android.nfc.tech.IsoDep;
 
 import net.sharksystem.android.protocols.nfc.OnMessageReceived;
 import net.sharksystem.android.protocols.nfc.OnMessageSend;
+import net.sharksystem.android.protocols.nfc.androidService.SmartCardEmulationService;
 
 import java.io.IOException;
 import java.util.Arrays;
+
 
 /**
  * Created by mn-io on 22.01.16.

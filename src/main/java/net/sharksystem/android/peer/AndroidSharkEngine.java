@@ -3,22 +3,16 @@ package net.sharksystem.android.peer;
 import android.app.Activity;
 import android.content.Context;
 
-import net.sharkfw.kep.SharkProtocolNotSupportedException;
 import net.sharkfw.asip.SharkStub;
-import net.sharkfw.knowledgeBase.Knowledge;
-import net.sharkfw.knowledgeBase.PeerSemanticTag;
-import net.sharkfw.knowledgeBase.SharkKBException;
+import net.sharkfw.kep.SharkProtocolNotSupportedException;
 import net.sharkfw.peer.J2SEAndroidSharkEngine;
-import net.sharkfw.peer.KnowledgePort;
 import net.sharkfw.protocols.RequestHandler;
 import net.sharkfw.protocols.Stub;
-import net.sharkfw.system.SharkSecurityException;
+import net.sharksystem.android.protocols.nfc.NfcMessageStub;
 import net.sharksystem.android.protocols.wifidirect.WifiDirectStreamStub;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
-
-
 
 public class AndroidSharkEngine extends J2SEAndroidSharkEngine {
     Context context;
@@ -59,37 +53,37 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine {
     }
 
     @Override
-    protected Stub createNfcStreamStub(SharkStub kepStub) throws SharkProtocolNotSupportedException {
-//        if (currentStub == null) {
-//            currentStub = new NfcMessageStub(context, activityRef);
-//            currentStub.setHandler(kepStub);
-//        }
+    protected Stub createNfcStreamStub(SharkStub stub) throws SharkProtocolNotSupportedException {
+        if (currentStub == null) {
+            currentStub = new NfcMessageStub(context, activityRef);
+            currentStub.setHandler((RequestHandler) stub);
+        }
         return currentStub;
     }
 
     @Override
     public void startNfc() throws SharkProtocolNotSupportedException, IOException {
-//        this.createNfcStreamStub(this.getKepStub()).start();
+        this.createNfcStreamStub(this.getAsipStub()).start();
     }
 
     @Override
     public void stopNfc() throws SharkProtocolNotSupportedException {
-//        this.createNfcStreamStub(this.getKepStub()).stop();
+        this.createNfcStreamStub(this.getAsipStub()).stop();
     }
 
     @Override
     protected Stub createBluetoothStreamStub(SharkStub kepStub) throws SharkProtocolNotSupportedException {
-        throw new SharkProtocolNotSupportedException("TODO: Timm");
+        throw new SharkProtocolNotSupportedException();
     }
 
     @Override
     public void startBluetooth() throws SharkProtocolNotSupportedException, IOException {
-        throw new SharkProtocolNotSupportedException("TODO: Timm");
+        throw new SharkProtocolNotSupportedException();
     }
 
     @Override
     public void stopBluetooth() throws SharkProtocolNotSupportedException {
-        throw new SharkProtocolNotSupportedException("TODO: Timm");
+        throw new SharkProtocolNotSupportedException();
     }
 
     @Override

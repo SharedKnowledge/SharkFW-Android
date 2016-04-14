@@ -18,6 +18,7 @@ public class NfcMessageReceivedHandler implements OnMessageReceived {
         this.nfcMessageStub = nfcMessageStub;
     }
 
+    @Override
     public void onMessage(byte[] message) {
         if (byteBuffer == null) {
             byteBuffer = message;
