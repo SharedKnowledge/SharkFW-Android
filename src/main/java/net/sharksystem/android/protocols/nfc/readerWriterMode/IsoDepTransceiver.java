@@ -18,7 +18,6 @@ import java.util.Arrays;
 public class IsoDepTransceiver implements Runnable {
 
     public static final byte[] KEEP_CHANNEL_OPEN_SIGNAL_ACTIVE = {(byte) 0xFF, (byte) 0xFE, (byte) 0xFF, (byte) 0xFE, (byte) 0xFF, (byte) 0xFE, (byte) 0xFF, (byte) 0xFE, (byte) 0xFF, (byte) 0xFE, (byte) 0xFF, (byte) 0xFE, (byte) 0xFF, (byte) 0xFD,};
-
     public static final byte[] CLA_INS_P1_P2 = {0x00, (byte) 0xA4, 0x04, 0x00};
     public static final byte[] AID_ANDROID = {(byte) 0xF0, 0x01, 0x02, 0x03, 0x06, 0x06, 0x06}; // needs to be equal host-apdu-service > aid-filter
     public static final byte[] AID_APDU = createSelectAidApdu(CLA_INS_P1_P2, AID_ANDROID);
@@ -43,7 +42,7 @@ public class IsoDepTransceiver implements Runnable {
             onMessageSendCall.setMaxSize(isoDep.getMaxTransceiveLength());
         }
 
-        onMessageReceived.newTag(tag);
+        onMessageReceived.handleNewTag(tag);
 
         thread = new Thread(this);
         thread.start();
@@ -59,21 +58,36 @@ public class IsoDepTransceiver implements Runnable {
             }
 
             while (isoDep.isConnected() && !Thread.interrupted()) {
-                byte[] nextMessage = onMessageSendCallback != null ? onMessageSendCallback.getNextMessage() : KEEP_CHANNEL_OPEN_SIGNAL_ACTIVE;
-                if (nextMessage == null) {
-                    nextMessage = KEEP_CHANNEL_OPEN_SIGNAL_ACTIVE;
-                }
-                response = isoDep.transceive(nextMessage); // TODO: tag lost if null response = therefore always send data to allow bidirectional...
-                if (!Arrays.equals(SmartCardEmulationService.KEEP_CHANNEL_OPEN_SIGNAL_PASSIVE, response)) {
-                    onMessageReceived.onMessage(response);
-                }
+                handleTransceiving();
             }
 
             isoDep.close();
         } catch (TagLostException ignore) {
-            onMessageReceived.tagLost();
+            onMessageReceived.handleTagLost();
         } catch (IOException e) {
-            onMessageReceived.onError(e);
+            onMessageReceived.handleError(e);
+        }
+    }
+
+    private void handleTransceiving() throws IOException {
+        byte[] response;
+        byte[] nextMessage;
+
+        if (onMessageSendCallback != null) {
+            nextMessage = onMessageSendCallback.getNextMessage();
+        } else {
+            nextMessage = KEEP_CHANNEL_OPEN_SIGNAL_ACTIVE;
+        }
+
+        if (nextMessage == null) {
+            nextMessage = KEEP_CHANNEL_OPEN_SIGNAL_ACTIVE;
+        }
+
+        // tag lost exception if response is null => therefore always send data to allow bidirectional data flow
+        response = isoDep.transceive(nextMessage);
+
+        if (!Arrays.equals(SmartCardEmulationService.KEEP_CHANNEL_OPEN_SIGNAL_PASSIVE, response)) {
+            onMessageReceived.handleMessageReceived(response);
         }
     }
 

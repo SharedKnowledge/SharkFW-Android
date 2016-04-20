@@ -39,6 +39,7 @@ public class NfcAdapterHelper {
         if (activity.isDestroyed()) {
             return;
         }
+
         SmartCardEmulationService.setInitialHandshakeResponse(smartCardIdentifier);
         SmartCardEmulationService.setSource(src);
         SmartCardEmulationService.setSink(dst);

@@ -31,7 +31,7 @@ public class SmartCardEmulationService extends HostApduService {
         }
 
         if (sink != null) {
-            sink.tagLost();
+            sink.handleTagLost();
         }
 
         isValidReader = false;
@@ -53,7 +53,7 @@ public class SmartCardEmulationService extends HostApduService {
         }
 
         if (sink != null && !Arrays.equals(IsoDepTransceiver.KEEP_CHANNEL_OPEN_SIGNAL_ACTIVE, data)) {
-            sink.onMessage(data);
+            sink.handleMessageReceived(data);
         }
 
         byte[] nextMessage = src.getNextMessage();

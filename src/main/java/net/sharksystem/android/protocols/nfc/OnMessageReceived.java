@@ -7,11 +7,11 @@ import android.nfc.Tag;
  */
 public interface OnMessageReceived {
 
-    void onMessage(byte[] message);
+    void handleMessageReceived(byte[] msg);
 
-    void onError(Exception exception);
+    void handleError(Exception exception);
 
-    void tagLost();
+    void handleTagLost();
 
-    void newTag(Tag tag);
+    void handleNewTag(Tag tag);
 }

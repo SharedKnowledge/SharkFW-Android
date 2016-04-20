@@ -19,11 +19,11 @@ public class NfcMessageReceivedHandler implements OnMessageReceived {
     }
 
     @Override
-    public void onMessage(byte[] message) {
+    public void handleMessageReceived(byte[] msg) {
         if (byteBuffer == null) {
-            byteBuffer = message;
+            byteBuffer = msg;
         } else {
-            byteBuffer = concat(byteBuffer, message);
+            byteBuffer = concat(byteBuffer, msg);
         }
     }
 
@@ -35,11 +35,11 @@ public class NfcMessageReceivedHandler implements OnMessageReceived {
     }
 
     @Override
-    public void onError(Exception exception) {
+    public void handleError(Exception exception) {
     }
 
     @Override
-    public void tagLost() {
+    public void handleTagLost() {
         if (byteBuffer != null) {
             handler.handleMessage(byteBuffer, nfcMessageStub);
             byteBuffer = null;
@@ -47,13 +47,10 @@ public class NfcMessageReceivedHandler implements OnMessageReceived {
     }
 
     @Override
-    public void newTag(Tag tag) {
+    public void handleNewTag(Tag tag) {
     }
-
 
     public void setHandler(RequestHandler handler) {
         this.handler = handler;
     }
-
-
 }
