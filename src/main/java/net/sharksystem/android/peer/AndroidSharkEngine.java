@@ -2,13 +2,16 @@ package net.sharksystem.android.peer;
 
 import android.app.Activity;
 import android.content.Context;
+import android.net.wifi.p2p.WifiP2pManager;
 
 import net.sharkfw.asip.SharkStub;
 import net.sharkfw.kep.SharkProtocolNotSupportedException;
 import net.sharkfw.peer.J2SEAndroidSharkEngine;
 import net.sharkfw.protocols.RequestHandler;
 import net.sharkfw.protocols.Stub;
+import net.sharkfw.system.L;
 import net.sharksystem.android.protocols.nfc.NfcMessageStub;
+import net.sharksystem.android.protocols.wifidirect.WifiDirectPeer;
 import net.sharksystem.android.protocols.wifidirect.WifiDirectStreamStub;
 
 import java.io.IOException;
@@ -51,6 +54,18 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine {
 
     public void stopWifiDirect() throws SharkProtocolNotSupportedException {
         currentStub.stop();
+    }
+
+    public Stub getWifiStub(){
+        return currentStub;
+    }
+
+    public void connect(WifiDirectPeer peer){
+        ((WifiDirectStreamStub) currentStub).connect(peer);
+    }
+
+    public void disconnect(WifiDirectPeer peer){
+        ((WifiDirectStreamStub) currentStub).disconnect(peer);
     }
 
     @Override

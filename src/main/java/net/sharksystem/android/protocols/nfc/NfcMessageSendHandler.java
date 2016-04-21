@@ -12,6 +12,9 @@ public class NfcMessageSendHandler implements OnMessageSend {
     private int size;
     private final Object lock = new Object();
     private NfcUxHandler uxHandler;
+    public static final String EXCEPTION_BUFFER_NOT_EMPTY = "Buffer not empty. Data loss on attempt to overwrite existing data";
+    public static final String EXCEPTION_BUFFER_NOT_COMPLETELY_SENT = "Buffer not send entirely before deactivated";
+
 
     @Override
     public byte[] getNextMessage() {

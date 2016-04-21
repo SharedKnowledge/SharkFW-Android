@@ -37,8 +37,7 @@ import java.util.Map;
 @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
 public class WifiDirectStreamStub
         extends BroadcastReceiver
-        implements StreamStub, StubController, WifiP2pManager.ConnectionInfoListener,
-            WifiDirectConnectionController{
+        implements StreamStub, WifiP2pManager.ConnectionInfoListener{
 
     private IntentFilter _intentFilter;
     private Context _context;
@@ -51,7 +50,6 @@ public class WifiDirectStreamStub
     private WifiP2pDnsSdServiceInfo _serviceInfo;
     private Map<String, String> _txtRecordMap;
 
-    private SharkWifiDirectManager _sharkWifiDirectManager;
     private Handler threadHandler;
     private Runnable thread;
     private int threadRuns = 0;
@@ -62,7 +60,7 @@ public class WifiDirectStreamStub
     private WifiP2pManager.Channel channel;
     private Map<String, String> txtRecordMap;
 
-    private SharkWifiDirectManager sharkWifiDirectManager;
+    private WifiDirectListener _wifiDirectListener;
 
     public WifiDirectStreamStub(Context context, WeakReference<Activity> activity) {
         _context = context;
@@ -71,11 +69,9 @@ public class WifiDirectStreamStub
         _manager = (WifiP2pManager) context.getSystemService(Context.WIFI_P2P_SERVICE);
         _channel =_manager.initialize(context, context.getMainLooper(), null);
 
-        _sharkWifiDirectManager = SharkWifiDirectManager.getInstance(_context);
-        _sharkWifiDirectManager.setStubControllerListener(this);
-        _sharkWifiDirectManager.setConnectionController(this);
-        _manager.setDnsSdResponseListeners(_channel, null, _sharkWifiDirectManager);
-        _sharkWifiDirectManager.onStatusChanged(WifiDirectStatus.INITIATED);
+        _wifiDirectListener = WifiDirectListener.getInstance(_context);
+        _manager.setDnsSdResponseListeners(_channel, null, _wifiDirectListener);
+        _wifiDirectListener.onStatusChanged(WifiDirectStatus.INITIATED);
 
         _intentFilter = new IntentFilter();
         _intentFilter.addAction(WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION);
@@ -85,7 +81,7 @@ public class WifiDirectStreamStub
         _context.registerReceiver(this, _intentFilter);
 
         _txtRecordMap = new HashMap<>();
-        _txtRecordMap.put("entry0", getMACAddress());
+        _txtRecordMap.put("entry0", getLocalAddress());
         _txtRecordMap.put("entry1", "This is just a test");
         _txtRecordMap.put("entry2", "to check if discovering is working");
         _serviceInfo =
@@ -108,7 +104,13 @@ public class WifiDirectStreamStub
 
     }
 
-    public String getMACAddress() {
+    @Override
+    public StreamConnection createStreamConnection(String addressString) throws IOException {
+        return null;
+    }
+
+    @Override
+    public String getLocalAddress() {
         try {
             BufferedReader br = new BufferedReader(new FileReader("/sys/class/net/wlan0/address"));
             String address = br.readLine();
@@ -118,16 +120,6 @@ public class WifiDirectStreamStub
             e.printStackTrace();
         }
         return null;
-    }
-
-    @Override
-    public StreamConnection createStreamConnection(String addressString) throws IOException {
-        return null;
-    }
-
-    @Override
-    public String getLocalAddress() {
-        return getMACAddress();
     }
 
     @Override
@@ -141,7 +133,7 @@ public class WifiDirectStreamStub
             threadHandler.removeCallbacks(thread);
             stopServiceDiscovery();
             removeServiceAdvertiser();
-            _sharkWifiDirectManager.onStatusChanged(WifiDirectStatus.STOPPED);
+            _wifiDirectListener.onStatusChanged(WifiDirectStatus.STOPPED);
             _isStarted=!_isStarted;
         }
     }
@@ -150,7 +142,7 @@ public class WifiDirectStreamStub
     public void start() throws IOException {
         if(!_isStarted){
             threadHandler.post(thread);
-            _sharkWifiDirectManager.onStatusChanged(WifiDirectStatus.DISCOVERING);
+            _wifiDirectListener.onStatusChanged(WifiDirectStatus.DISCOVERING);
             _isStarted=!_isStarted;
         }
     }
@@ -194,26 +186,9 @@ public class WifiDirectStreamStub
 
     }
 
-
     @Override
     public void offer(Knowledge knowledge) throws SharkNotSupportedException {
 
-    }
-
-    @Override
-    public void onStubStart() throws IOException {
-        if(!_isStarted)
-            start();
-    }
-
-    @Override
-    public void onStubStop() {
-        if(_isStarted)
-            stop();
-    }
-
-    @Override
-    public void onStubRestart() {
     }
 
     @Override
@@ -233,7 +208,7 @@ public class WifiDirectStreamStub
             }
         } else if (WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION.equals(action)) {
             // Call WifiP2pManager.requestPeers() to get a list of current peers
-            _manager.requestPeers(_channel, _sharkWifiDirectManager);
+            _manager.requestPeers(_channel, _wifiDirectListener);
         } else if (WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION.equals(action)) {
             // Respond to new connection or disconnections
             _networkInfo = (NetworkInfo) intent
@@ -250,13 +225,12 @@ public class WifiDirectStreamStub
 
     @Override
     public void onConnectionInfoAvailable(WifiP2pInfo info) {
-        L.d("onConnectionInfoAvailable", info.toString());
-        _sharkWifiDirectManager.onStatusChanged(WifiDirectStatus.CONNECTED);
+//        L.d("onConnectionInfoAvailable", info.toString());
+        _wifiDirectListener.onStatusChanged(WifiDirectStatus.CONNECTED);
     }
 
-    @Override
-    public void onConnect(WifiDirectPeer peer) {
-        L.d("STUB", "onConnect");
+    public void connect(WifiDirectPeer peer) {
+        L.d("Connect to peer", this);
         final WifiP2pConfig config = new WifiP2pConfig();
         config.deviceAddress = peer.getDevice().deviceAddress;
         config.wps.setup = WpsInfo.PBC;
@@ -264,8 +238,8 @@ public class WifiDirectStreamStub
         _manager.connect(_channel, config, new WifiActionListener("Connect"));
     }
 
-    @Override
-    public void onDisconnect(WifiDirectPeer peer) {
+    public void disconnect(WifiDirectPeer peer) {
+        L.d("Disconnect from peer", this);
 //        _manager.cancelConnect(_channel, new WifiActionListener("onDisconnect"));
     }
 }
