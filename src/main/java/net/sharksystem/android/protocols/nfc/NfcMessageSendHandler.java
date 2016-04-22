@@ -12,6 +12,7 @@ public class NfcMessageSendHandler implements OnMessageSend {
     private byte[] byteBuffer = null;
     private int size;
     private final Object lock = new Object();
+    private NfcUXHandler uxHandler;
 
     @Override
     public byte[] getNextMessage() {
@@ -23,8 +24,10 @@ public class NfcMessageSendHandler implements OnMessageSend {
     public void onDeactivated(int reason) {
         synchronized (lock) {
             if (byteBuffer != null && byteBuffer.length > 0) {
+                getUxHandler().sendingNotDoneCompletely();
                 throw new IllegalStateException(EXCEPTION_BUFFER_NOT_COMPLETELY_SENT);
             }
+            getUxHandler().tagGoneOnSender();
         }
     }
 
@@ -36,9 +39,11 @@ public class NfcMessageSendHandler implements OnMessageSend {
     public void setData(byte[] data) {
         synchronized (lock) {
             if (byteBuffer != null && byteBuffer.length > 0) {
+                getUxHandler().preparedSendingFailed();
                 throw new IllegalStateException(EXCEPTION_BUFFER_NOT_EMPTY);
             }
             this.byteBuffer = data;
+            getUxHandler().preparedSending(data.length);
         }
     }
 
@@ -53,7 +58,21 @@ public class NfcMessageSendHandler implements OnMessageSend {
             final byte[] currentBuffer = Arrays.copyOfRange(byteBuffer, 0, length);
 
             byteBuffer = Arrays.copyOfRange(byteBuffer, length, byteBuffer.length);
+            getUxHandler().sending(currentBuffer.length, byteBuffer.length);
             return currentBuffer;
         }
+    }
+
+    private NfcUXHandler getUxHandler() {
+        if (this.uxHandler != null) {
+            return uxHandler;
+        } else {
+            uxHandler = new NfcUXHandler();
+            return uxHandler;
+        }
+    }
+
+    public void setUxHandler(NfcUXHandler uxHandler) {
+        this.uxHandler = uxHandler;
     }
 }

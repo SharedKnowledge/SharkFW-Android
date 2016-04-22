@@ -103,4 +103,9 @@ public class NfcMessageStub implements MessageStub {
     public String getReplyAddressString() {
         return null;
     }
+
+    public void setUxHandler(NfcUXHandler handler) {
+        receivedRequestHandler.setUxHandler(handler);
+        sendRequestHandler.setUxHandler(handler);
+    }
 }

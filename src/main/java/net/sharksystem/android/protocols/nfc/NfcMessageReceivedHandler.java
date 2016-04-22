@@ -10,11 +10,20 @@ import java.util.Arrays;
  * Created by mn-io on 25.01.2016.
  */
 public class NfcMessageReceivedHandler implements OnMessageReceived {
+
+    public static final String EXCEPTION_STUB_NULL = "Stub must not be null";
+
     private RequestHandler handler;
-    private NfcMessageStub nfcMessageStub;
+    private final NfcMessageStub nfcMessageStub;
+    private NfcUXHandler uxHandler;
+
     private byte[] byteBuffer;
 
     public NfcMessageReceivedHandler(NfcMessageStub nfcMessageStub) {
+        if (nfcMessageStub == null) {
+            throw new IllegalArgumentException(EXCEPTION_STUB_NULL);
+        }
+
         this.nfcMessageStub = nfcMessageStub;
     }
 
@@ -25,6 +34,8 @@ public class NfcMessageReceivedHandler implements OnMessageReceived {
         } else {
             byteBuffer = concat(byteBuffer, msg);
         }
+
+        getUxHandler().receiving(msg.length, byteBuffer.length);
     }
 
     public static byte[] concat(byte[] first, byte[] second) {
@@ -36,12 +47,14 @@ public class NfcMessageReceivedHandler implements OnMessageReceived {
 
     @Override
     public void handleError(Exception exception) {
+        getUxHandler().handleErrorOnReceiving(exception);
     }
 
     @Override
     public void handleTagLost() {
         if (byteBuffer != null) {
             handler.handleMessage(byteBuffer, nfcMessageStub);
+            getUxHandler().tagGoneOnReceiver();
             byteBuffer = null;
         }
     }
@@ -52,5 +65,18 @@ public class NfcMessageReceivedHandler implements OnMessageReceived {
 
     public void setHandler(RequestHandler handler) {
         this.handler = handler;
+    }
+
+    private NfcUXHandler getUxHandler() {
+        if (this.uxHandler != null) {
+            return uxHandler;
+        } else {
+            uxHandler = new NfcUXHandler();
+            return uxHandler;
+        }
+    }
+
+    public void setUxHandler(NfcUXHandler uxHandler) {
+        this.uxHandler = uxHandler;
     }
 }
