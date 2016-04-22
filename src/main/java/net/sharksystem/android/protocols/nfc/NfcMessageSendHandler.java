@@ -7,7 +7,7 @@ import java.util.Arrays;
  */
 public class NfcMessageSendHandler implements OnMessageSend {
     public static final String EXCEPTION_BUFFER_NOT_EMPTY = "Buffer not empty. Data loss on attempt to overwrite existing data";
-    public static final String EXCEPTION_BUFFER_NOT_COMPLETELY_SENT = "Buffer not send entirely before deactivated";
+    public static final String EXCEPTION_BUFFER_NOT_COMPLETELY_SENT = "Buffer was not sent entirely before deactivated";
 
     private byte[] byteBuffer = null;
     private int size;
@@ -24,6 +24,7 @@ public class NfcMessageSendHandler implements OnMessageSend {
     public void onDeactivated(int reason) {
         synchronized (lock) {
             if (byteBuffer != null && byteBuffer.length > 0) {
+                this.byteBuffer = null;
                 getUxHandler().sendingNotDoneCompletely();
                 throw new IllegalStateException(EXCEPTION_BUFFER_NOT_COMPLETELY_SENT);
             }

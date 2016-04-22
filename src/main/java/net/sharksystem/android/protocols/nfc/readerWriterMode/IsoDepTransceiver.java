@@ -21,6 +21,7 @@ public class IsoDepTransceiver implements Runnable {
     public static final byte[] CLA_INS_P1_P2 = {0x00, (byte) 0xA4, 0x04, 0x00};
     public static final byte[] AID_ANDROID = {(byte) 0xF0, 0x01, 0x02, 0x03, 0x06, 0x06, 0x06}; // needs to be equal host-apdu-service > aid-filter
     public static final byte[] AID_APDU = createSelectAidApdu(CLA_INS_P1_P2, AID_ANDROID);
+    public static final byte[] EMPTY_MSG = new byte[0];
 
     private final Thread thread;
 
@@ -88,6 +89,8 @@ public class IsoDepTransceiver implements Runnable {
 
         if (!Arrays.equals(SmartCardEmulationService.KEEP_CHANNEL_OPEN_SIGNAL_PASSIVE, response)) {
             onMessageReceived.handleMessageReceived(response);
+        } else {
+            onMessageReceived.handleMessageReceived(EMPTY_MSG);
         }
     }
 

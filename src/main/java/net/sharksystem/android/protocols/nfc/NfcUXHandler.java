@@ -7,40 +7,47 @@ import net.sharkfw.system.L;
  */
 public class NfcUXHandler {
 
+    public static final String LOG_NFC_PREPARED_SENDING = "nfc: sending - prepared with total data: %d bytes";
+    public static final String LOG_NFC_PREPARED_SENDING_FAIL = "nfc: sending - preparation failed because buffer is not empty";
+    public static final String LOG_NFC_SENDING = "nfc: sending %d bytes of %d, left: %d bytes";
+    public static final String LOG_NFC_SENDING_INCOMPLETE = "nfc: sending was not done completely";
+    public static final String LOG_NFC_TAG_GONE_SENDER = "nfc: sending tag gone";
+    public static final String LOG_NFC_RECEIVING = "nfc: receiving %d bytes, total received: %d bytes";
+    public static final String LOG_NFC_TAG_GONE_RECEIVER = "nfc: receiving tag gone";
+    public static final String LOG_NFC_HANDLE_ERROR_RECEIVING = "nfc: receiving error occurred: ";
+
     private int totalDataLength;
 
     public void preparedSending(int totalDataLength) {
         this.totalDataLength = totalDataLength;
-        L.d(String.format("nfc: sending - prepared with total data: %d", totalDataLength));
+        L.d(String.format(LOG_NFC_PREPARED_SENDING, totalDataLength), this);
     }
 
     public void preparedSendingFailed() {
-        L.d("nfc: sending - preparation failed because buffer is not empty");
-
+        L.d(LOG_NFC_PREPARED_SENDING_FAIL, this);
     }
 
     public void sending(int currentDataLength, int leftDataLength) {
-        L.d(String.format("nfc: sending %d bytes of %d, left: %d", currentDataLength, totalDataLength, leftDataLength));
+        L.d(String.format(LOG_NFC_SENDING, currentDataLength, totalDataLength, leftDataLength), this);
     }
 
     public void sendingNotDoneCompletely() {
-        L.d("nfc: sending was not done completely");
+        L.d(LOG_NFC_SENDING_INCOMPLETE, this);
     }
 
     public void tagGoneOnSender() {
-        L.d("nfc: sending tag gone");
+        L.d(LOG_NFC_TAG_GONE_SENDER, this);
     }
 
-
     public void receiving(int currentDataLength, int newTotalDataLength) {
-        L.d(String.format("nfc: receiving %d bytes, total received: %d", currentDataLength, newTotalDataLength));
+        L.d(String.format(LOG_NFC_RECEIVING, currentDataLength, newTotalDataLength), this);
     }
 
     public void tagGoneOnReceiver() {
-        L.d("nfc: receiving tag gone");
+        L.d(LOG_NFC_TAG_GONE_RECEIVER, this);
     }
 
     public void handleErrorOnReceiving(Exception exception) {
-        L.d("nfc: receiving error occured: " + exception.getMessage());
+        L.d(LOG_NFC_HANDLE_ERROR_RECEIVING + exception.getMessage(), this);
     }
 }

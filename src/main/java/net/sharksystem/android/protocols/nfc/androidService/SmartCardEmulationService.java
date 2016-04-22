@@ -18,6 +18,7 @@ import java.util.Arrays;
 public class SmartCardEmulationService extends HostApduService {
 
     public static final byte[] KEEP_CHANNEL_OPEN_SIGNAL_PASSIVE = {(byte) 0xFE, (byte) 0xFF, (byte) 0xFE, (byte) 0xFF, (byte) 0xFE, (byte) 0xFF, (byte) 0xFE, (byte) 0xFF, (byte) 0xFE, (byte) 0xFF, (byte) 0xFE, (byte) 0xFF, (byte) 0xFC,};
+    public static final byte[] EMPTY_MSG = new byte[0];
 
     private static OnMessageSend src;
     private static OnMessageReceived sink;
@@ -52,8 +53,12 @@ public class SmartCardEmulationService extends HostApduService {
             return null;
         }
 
-        if (sink != null && !Arrays.equals(IsoDepTransceiver.KEEP_CHANNEL_OPEN_SIGNAL_ACTIVE, data)) {
-            sink.handleMessageReceived(data);
+        if (sink != null) {
+            if (!Arrays.equals(IsoDepTransceiver.KEEP_CHANNEL_OPEN_SIGNAL_ACTIVE, data)) {
+                sink.handleMessageReceived(data);
+            } else {
+                sink.handleMessageReceived(EMPTY_MSG);
+            }
         }
 
         byte[] nextMessage = src.getNextMessage();
