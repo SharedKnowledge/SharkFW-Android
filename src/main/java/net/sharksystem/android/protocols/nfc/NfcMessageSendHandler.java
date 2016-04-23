@@ -1,15 +1,17 @@
 package net.sharksystem.android.protocols.nfc;
 
+import net.sharksystem.android.protocols.nfc.ux.NfcUxHandler;
+
 import java.util.Arrays;
 
 /**
  * Created by mn-io on 25.01.2016.
  */
 public class NfcMessageSendHandler implements OnMessageSend {
-    public byte[] byteBuffer = null;
+    byte[] byteBuffer = null;
     private int size;
     private final Object lock = new Object();
-    private NfcUXHandler uxHandler;
+    private NfcUxHandler uxHandler;
 
     @Override
     public byte[] getNextMessage() {
@@ -59,16 +61,16 @@ public class NfcMessageSendHandler implements OnMessageSend {
         }
     }
 
-    private NfcUXHandler getUxHandler() {
+    private NfcUxHandler getUxHandler() {
         if (this.uxHandler != null) {
             return uxHandler;
         } else {
-            uxHandler = new NfcUXHandler();
+            uxHandler = new NfcUxHandler();
             return uxHandler;
         }
     }
 
-    public void setUxHandler(NfcUXHandler uxHandler) {
+    public void setUxHandler(NfcUxHandler uxHandler) {
         this.uxHandler = uxHandler;
     }
 }

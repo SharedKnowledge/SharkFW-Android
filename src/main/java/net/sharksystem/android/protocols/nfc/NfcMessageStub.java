@@ -12,6 +12,8 @@ import net.sharkfw.knowledgeBase.Knowledge;
 import net.sharkfw.protocols.MessageStub;
 import net.sharkfw.protocols.RequestHandler;
 import net.sharkfw.system.SharkNotSupportedException;
+import net.sharksystem.android.protocols.nfc.ux.NfcUxHandler;
+import net.sharksystem.android.protocols.nfc.ux.TdmaNfcUxHandler;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
@@ -104,7 +106,10 @@ public class NfcMessageStub implements MessageStub {
         return null;
     }
 
-    public void setUxHandler(NfcUXHandler handler) {
+    public void setUxHandler(NfcUxHandler handler) {
+        if (handler instanceof TdmaNfcUxHandler) {
+            ((TdmaNfcUxHandler) handler).setNfcStub(this);
+        }
         receivedRequestHandler.setUxHandler(handler);
         sendRequestHandler.setUxHandler(handler);
     }

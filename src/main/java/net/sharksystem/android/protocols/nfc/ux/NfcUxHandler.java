@@ -1,11 +1,12 @@
-package net.sharksystem.android.protocols.nfc;
+package net.sharksystem.android.protocols.nfc.ux;
 
 import net.sharkfw.system.L;
+import net.sharksystem.android.protocols.nfc.NfcMessageStub;
 
 /**
  * Created by mn-io on 22.01.16.
  */
-public class NfcUXHandler {
+public class NfcUxHandler {
 
     public static final String LOG_NFC_PREPARED_SENDING = "nfc: sending - prepared with total data: %d bytes";
     public static final String LOG_NFC_PREPARED_SENDING_FAIL = "nfc: sending - preparation failed because buffer is not empty";
@@ -17,6 +18,8 @@ public class NfcUXHandler {
     public static final String LOG_NFC_HANDLE_ERROR_RECEIVING = "nfc: receiving error occurred: ";
 
     private int totalDataLength;
+
+    private NfcMessageStub nfcStub;
 
     public void preparedSending(int totalDataLength) {
         this.totalDataLength = totalDataLength;

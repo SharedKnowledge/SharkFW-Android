@@ -3,6 +3,7 @@ package net.sharksystem.android.protocols.nfc;
 import android.nfc.Tag;
 
 import net.sharkfw.protocols.RequestHandler;
+import net.sharksystem.android.protocols.nfc.ux.NfcUxHandler;
 
 import java.util.Arrays;
 
@@ -15,7 +16,7 @@ public class NfcMessageReceivedHandler implements OnMessageReceived {
 
     private RequestHandler handler;
     private final NfcMessageStub nfcMessageStub;
-    private NfcUXHandler uxHandler;
+    private NfcUxHandler uxHandler;
 
     private byte[] byteBuffer;
 
@@ -71,16 +72,16 @@ public class NfcMessageReceivedHandler implements OnMessageReceived {
         this.handler = handler;
     }
 
-    private NfcUXHandler getUxHandler() {
+    private NfcUxHandler getUxHandler() {
         if (this.uxHandler != null) {
             return uxHandler;
         } else {
-            uxHandler = new NfcUXHandler();
+            uxHandler = new NfcUxHandler();
             return uxHandler;
         }
     }
 
-    public void setUxHandler(NfcUXHandler uxHandler) {
+    public void setUxHandler(NfcUxHandler uxHandler) {
         this.uxHandler = uxHandler;
     }
 }
