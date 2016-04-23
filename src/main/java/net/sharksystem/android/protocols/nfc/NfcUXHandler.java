@@ -31,7 +31,7 @@ public class NfcUXHandler {
         L.d(String.format(LOG_NFC_SENDING, currentDataLength, totalDataLength, leftDataLength), this);
     }
 
-    public void sendingNotDoneCompletely() {
+    public void sendingNotDoneCompletely(byte[] buffer) {
         L.d(LOG_NFC_SENDING_INCOMPLETE, this);
     }
 

@@ -21,9 +21,11 @@ public class NfcMessageSendHandler implements OnMessageSend {
     public void onDeactivated(int reason) {
         synchronized (lock) {
             if (byteBuffer != null && byteBuffer.length > 0) {
-                getUxHandler().sendingNotDoneCompletely();
+                getUxHandler().sendingNotDoneCompletely(byteBuffer);
+                this.byteBuffer = null;
                 return;
             }
+            this.byteBuffer = null;
             getUxHandler().tagGoneOnSender();
         }
     }
@@ -43,8 +45,8 @@ public class NfcMessageSendHandler implements OnMessageSend {
     public byte[] getBytesFromBuffer(int maxLength) {
         synchronized (lock) {
             if (byteBuffer == null || 0 == byteBuffer.length) {
-                getUxHandler().sending(0, 0);
                 byteBuffer = null;
+                getUxHandler().sending(0, 0);
                 return null;
             }
 

@@ -28,9 +28,9 @@ public class IsoDepTransceiver implements Runnable {
     private byte[] initialHandshakeIdentifier;
     private IsoDep isoDep;
     private OnMessageReceived onMessageReceived;
-    private OnMessageSend onMessageSendCallback;
+    private OnMessageSend onMessageSend;
 
-    public IsoDepTransceiver(String smartCardIdentifier, Tag tag, IsoDep isoDep, OnMessageReceived onMessageReceived, OnMessageSend onMessageSendCall) {
+    public IsoDepTransceiver(String smartCardIdentifier, Tag tag, IsoDep isoDep, OnMessageReceived onMessageReceived, OnMessageSend onMessageSend) {
         if (smartCardIdentifier != null) {
             this.initialHandshakeIdentifier = smartCardIdentifier.getBytes();
         }
@@ -38,9 +38,9 @@ public class IsoDepTransceiver implements Runnable {
         this.isoDep = isoDep;
         this.onMessageReceived = onMessageReceived;
 
-        if (onMessageSendCall != null) {
-            this.onMessageSendCallback = onMessageSendCall;
-            onMessageSendCall.setMaxSize(isoDep.getMaxTransceiveLength());
+        if (onMessageSend != null) {
+            this.onMessageSend = onMessageSend;
+            onMessageSend.setMaxSize(isoDep.getMaxTransceiveLength());
         }
 
         onMessageReceived.handleNewTag(tag);
@@ -74,8 +74,8 @@ public class IsoDepTransceiver implements Runnable {
         byte[] response;
         byte[] nextMessage;
 
-        if (onMessageSendCallback != null) {
-            nextMessage = onMessageSendCallback.getNextMessage();
+        if (onMessageSend != null) {
+            nextMessage = onMessageSend.getNextMessage();
         } else {
             nextMessage = KEEP_CHANNEL_OPEN_SIGNAL_ACTIVE;
         }

@@ -30,7 +30,7 @@ public class NfcMessageReceivedHandler implements OnMessageReceived {
     @Override
     public void handleMessageReceived(byte[] msg) {
         if (byteBuffer == null) {
-            byteBuffer = msg;
+            byteBuffer = concat(new byte[0], msg);
         } else {
             byteBuffer = concat(byteBuffer, msg);
         }
@@ -39,10 +39,6 @@ public class NfcMessageReceivedHandler implements OnMessageReceived {
     }
 
     public static byte[] concat(byte[] first, byte[] second) {
-        if (second.length == 0) {
-            return first;
-        }
-
         final int newLength = first.length + second.length;
         byte[] result = Arrays.copyOf(first, newLength);
         System.arraycopy(second, 0, result, first.length, second.length);
@@ -57,7 +53,11 @@ public class NfcMessageReceivedHandler implements OnMessageReceived {
     @Override
     public void handleTagLost() {
         if (byteBuffer != null && byteBuffer.length > 0) {
-            handler.handleMessage(byteBuffer, nfcMessageStub);
+            try {
+                handler.handleMessage(byteBuffer, nfcMessageStub);
+            } catch (Exception e) {
+                getUxHandler().handleErrorOnReceiving(e);
+            }
             byteBuffer = null;
         }
         getUxHandler().tagGoneOnReceiver();
