@@ -8,7 +8,7 @@ import java.util.Arrays;
  * Created by mn-io on 25.01.2016.
  */
 public class NfcMessageSendHandler implements OnMessageSend {
-    byte[] byteBuffer = null;
+    private byte[] byteBuffer = null;
     private int size;
     private final Object lock = new Object();
     private NfcUxHandler uxHandler;
@@ -40,7 +40,9 @@ public class NfcMessageSendHandler implements OnMessageSend {
     public void setData(byte[] data) {
         synchronized (lock) {
             this.byteBuffer = data;
-            getUxHandler().preparedSending(data.length);
+            if (data != null) {
+                getUxHandler().preparedSending(data.length);
+            }
         }
     }
 

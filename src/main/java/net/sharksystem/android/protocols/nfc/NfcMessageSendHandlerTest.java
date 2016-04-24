@@ -10,7 +10,7 @@ public class NfcMessageSendHandlerTest extends TestCase {
     public void testGetBytesFromBuffer() throws Exception {
         final NfcMessageSendHandler service = new NfcMessageSendHandler();
 
-        service.byteBuffer = "Hello World".getBytes();
+        service.setData("Hello World".getBytes());
 
         byte[] bytesFromBuffer = service.getBytesFromBuffer(5);
         assertEquals(bytesFromBuffer.length, "Hello".getBytes().length);
@@ -25,7 +25,7 @@ public class NfcMessageSendHandlerTest extends TestCase {
         assertNull(bytesFromBuffer);
 
 
-        service.byteBuffer = "m".getBytes();
+        service.setData("m".getBytes());
 
         bytesFromBuffer = service.getBytesFromBuffer(5);
         assertEquals(bytesFromBuffer.length, "m".getBytes().length);
@@ -34,13 +34,13 @@ public class NfcMessageSendHandlerTest extends TestCase {
         assertNull(bytesFromBuffer);
 
 
-        service.byteBuffer = "".getBytes();
+        service.setData("".getBytes());
 
         bytesFromBuffer = service.getBytesFromBuffer(5);
         assertNull(bytesFromBuffer);
 
 
-        service.byteBuffer = null;
+        service.setData(null);
 
         bytesFromBuffer = service.getBytesFromBuffer(5);
         assertNull(bytesFromBuffer);
