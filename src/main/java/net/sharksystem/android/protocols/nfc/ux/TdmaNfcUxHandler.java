@@ -45,6 +45,8 @@ public class TdmaNfcUxHandler extends NfcUxHandler {
     }
 
     public void startReaderModeNegotiation() {
+        stopNegotiation();
+
         L.d(LOG_NFC_TDMA_AS_START_NEGOTIATION, this);
         L.d(String.format(LOG_NFC_TDMA_AS_SMARTCARD, TIMEOUTS[0]), this);
         isNegotiating = true;
