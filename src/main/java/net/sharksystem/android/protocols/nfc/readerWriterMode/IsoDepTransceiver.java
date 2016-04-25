@@ -13,7 +13,7 @@ import java.util.Arrays;
 
 
 /**
- * Created by mn-io on 22.01.16.
+ * Created by Mario Neises (mn-io) on 22.01.16.
  */
 public class IsoDepTransceiver implements Runnable {
 

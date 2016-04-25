@@ -10,7 +10,7 @@ import net.sharksystem.android.protocols.nfc.readerWriterMode.NfcReaderCallback;
 
 
 /**
- * Created by mn-io on 23.01.2016.
+ * Created by Mario Neises (mn-io) on 23.01.2016.
  */
 @TargetApi(Build.VERSION_CODES.KITKAT)
 public class NfcAdapterHelper {

@@ -3,7 +3,7 @@ package net.sharksystem.android.protocols.nfc;
 import junit.framework.TestCase;
 
 /**
- * Created by mn-io on 25.01.2016.
+ * Created by Mario Neises (mn-io) on 25.01.2016.
  */
 public class NfcMessageSendHandlerTest extends TestCase {
 

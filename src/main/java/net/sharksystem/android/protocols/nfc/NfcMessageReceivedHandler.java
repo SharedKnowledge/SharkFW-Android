@@ -8,7 +8,7 @@ import net.sharksystem.android.protocols.nfc.ux.NfcUxHandler;
 import java.util.Arrays;
 
 /**
- * Created by mn-io on 25.01.2016.
+ * Created by Mario Neises (mn-io) on 25.01.2016.
  */
 public class NfcMessageReceivedHandler implements OnMessageReceived {
 
