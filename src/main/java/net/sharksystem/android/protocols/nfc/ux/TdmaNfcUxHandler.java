@@ -65,9 +65,16 @@ public class TdmaNfcUxHandler extends NfcUxHandler {
             return;
         }
 
+        handler.removeCallbacks(toggleNfcMode);
         isNegotiating = false;
         L.d(LOG_NFC_TDMA_AS_STOP_NEGOTIATION, this);
+    }
+
+    public void forceStop() {
         handler.removeCallbacks(toggleNfcMode);
+        nfcStub.stop();
+        isNegotiating = false;
+        L.d(LOG_NFC_TDMA_AS_STOP_NEGOTIATION, this);
     }
 
     //    @Override
