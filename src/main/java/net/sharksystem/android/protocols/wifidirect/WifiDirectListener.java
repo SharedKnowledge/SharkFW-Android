@@ -84,26 +84,23 @@ public class WifiDirectListener
         String toastText = "";
         switch (status) {
             case WifiDirectStatus.DISCOVERING:
-                L.d("onStatusChanged", "DISCOVERING...");
                 toastText = "DISCOVERING";
                 break;
             case WifiDirectStatus.CONNECTED:
-                L.d("onStatusChanged", "CONNECTED.");
                 toastText = "CONNECTED";
                 break;
             case WifiDirectStatus.DISCONNECTED:
-                L.d("onStatusChanged", "DISCONNECTED.");
                 toastText = "DISCONNECTED";
                 break;
             case WifiDirectStatus.STOPPED:
-                L.d("onStatusChanged", "STOPPED.");
                 toastText = "STOPPED";
                 break;
             case WifiDirectStatus.INITIATED:
-                L.d("onStatusChanged", "INITIATED.");
                 toastText = "INITIATED";
                 break;
         }
+
+        L.d("onStatusChanged: "+ toastText, this);
         if (_context != null)
             Toast.makeText(this._context, toastText, Toast.LENGTH_SHORT).show();
     }

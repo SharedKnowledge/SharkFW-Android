@@ -182,7 +182,6 @@ public class WifiDirectStreamStub
 //            if (_state != WifiDirectStreamStubState.READY)
             _manager.requestPeers(_channel, _wifiDirectListener);
         } else if (WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION.equals(action)) {
-            L.d("connection changed", this);
             NetworkInfo networkInfo = (NetworkInfo) intent.getParcelableExtra(WifiP2pManager.EXTRA_NETWORK_INFO);
             if(networkInfo.isConnected()){
                 _manager.requestConnectionInfo(_channel, WifiDirectStreamStub.this);
