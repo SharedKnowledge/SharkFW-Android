@@ -45,6 +45,7 @@ public class AndroidKP extends KnowledgePort {
 
     @Override
     protected void handleRaw(InputStream is, ASIPConnection asipConnection) {
+        L.d("RAAAAAAWWWR!", this);
         super.handleRaw(is, asipConnection);
     }
 

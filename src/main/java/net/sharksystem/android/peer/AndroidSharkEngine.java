@@ -106,4 +106,8 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine {
         // and it does not look like it is designed to work with start/stop methods.
         return currentStub;
     }
+
+    public void sendWifiMessage(String text) {
+        ((WifiDirectStreamStub) currentStub).sendMessage(text);
+    }
 }

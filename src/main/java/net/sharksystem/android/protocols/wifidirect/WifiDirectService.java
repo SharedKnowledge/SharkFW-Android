@@ -9,6 +9,8 @@ import android.os.IBinder;
 import android.support.v4.content.LocalBroadcastManager;
 
 import net.sharkfw.kep.SharkProtocolNotSupportedException;
+import net.sharkfw.knowledgeBase.PeerSemanticTag;
+import net.sharkfw.knowledgeBase.inmemory.InMemoSharkKB;
 import net.sharkfw.system.L;
 import net.sharksystem.android.peer.AndroidSharkEngine;
 
@@ -25,15 +27,16 @@ public class WifiDirectService extends Service {
         public WifiDirectService getInstance() {
             return WifiDirectService.this;
         }
+
     }
     private static WifiManager _wifiManager;
-
     private IBinder _binder = new LocalBinder();
+
     private boolean _started = false;
     // Shark things
     private AndroidSharkEngine _engine;
-
     private AndroidKP _kp;
+
     @Override
     public void onCreate() {
         _wifiManager = (WifiManager) this.getSystemService(Context.WIFI_SERVICE);
@@ -50,7 +53,6 @@ public class WifiDirectService extends Service {
         _engine = new AndroidSharkEngine(this);
         _kp = new AndroidKP(_engine);
     }
-
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
 
@@ -104,5 +106,9 @@ public class WifiDirectService extends Service {
 
     public void connect(WifiDirectPeer peer){
         _engine.connect(peer);
+    }
+
+    public void sendMessage(String text) {
+        _engine.sendWifiMessage(text);
     }
 }

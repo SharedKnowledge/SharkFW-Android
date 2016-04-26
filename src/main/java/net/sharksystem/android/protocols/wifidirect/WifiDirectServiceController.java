@@ -99,6 +99,10 @@ public class WifiDirectServiceController
         _wifiDirectService.disconnect();
     }
 
+    public void sendMessage(String text){
+        _wifiDirectService.sendMessage(text);
+    }
+
     public ArrayList<WifiDirectPeer> getPeers(){
         return _peers;
     }
