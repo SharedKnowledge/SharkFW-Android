@@ -207,7 +207,6 @@ public class WifiDirectStreamStub
                 // Wi-Fi P2P is not enabled
             }
         } else if (WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION.equals(action)) {
-            // Call WifiP2pManager.requestPeers() to get a list of current peers
             _manager.requestPeers(_channel, _wifiDirectListener);
         } else if (WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION.equals(action)) {
             // Respond to new connection or disconnections

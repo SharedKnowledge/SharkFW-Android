@@ -20,8 +20,6 @@ import java.lang.reflect.Method;
 public class WifiDirectService extends Service {
 
     private static WifiManager _wifiManager;
-    private LocalBroadcastManager _lbm;
-    private WifiDirectListener _wifiDirectListener;
 
     // Shark things
     private AndroidSharkEngine _engine;
@@ -29,8 +27,16 @@ public class WifiDirectService extends Service {
 
     @Override
     public void onCreate() {
-        _lbm = LocalBroadcastManager.getInstance(this);
-        _wifiDirectListener = WifiDirectListener.getInstance(this);
+        _wifiManager = (WifiManager) this.getSystemService(Context.WIFI_SERVICE);
+        if(_wifiManager.isWifiEnabled())
+            _wifiManager.setWifiEnabled(false);
+        _wifiManager.setWifiEnabled(true);
+
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
 
         _engine = new AndroidSharkEngine(this);
         _kp = new AndroidKP(_engine);
@@ -68,25 +74,6 @@ public class WifiDirectService extends Service {
         }
 
         L.d("Service destroyed.");
-    }
-
-    public static void enableWiFi(Context context) {
-        _wifiManager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
-        _wifiManager.setWifiEnabled(true);
-    }
-
-    public static boolean isWiFiEnabled(Context context) {
-        if (hotspotIsEnabled(context)) {
-            return false;
-        }
-
-        _wifiManager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
-        return _wifiManager.isWifiEnabled();
-    }
-
-    public static void disableWiFi(Context context) {
-        _wifiManager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
-        _wifiManager.setWifiEnabled(false);
     }
 
     public static boolean hotspotIsEnabled(Context context) {

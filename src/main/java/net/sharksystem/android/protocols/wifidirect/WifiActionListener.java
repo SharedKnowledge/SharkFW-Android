@@ -33,6 +33,6 @@ public class WifiActionListener implements WifiP2pManager.ActionListener {
             case 2:
                 reasonText="BUSY";
         }
-        L.d("WifiP2P", message + " failed. Reason: " + reasonText);
+        L.d(message + " failed. Reason: " + reasonText, this);
     }
 }
