@@ -4,6 +4,7 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.net.wifi.WifiManager;
+import android.os.Binder;
 import android.os.IBinder;
 import android.support.v4.content.LocalBroadcastManager;
 
@@ -19,12 +20,20 @@ import java.lang.reflect.Method;
  */
 public class WifiDirectService extends Service {
 
+    public class LocalBinder extends Binder {
+
+        public WifiDirectService getInstance() {
+            return WifiDirectService.this;
+        }
+    }
     private static WifiManager _wifiManager;
 
+    private IBinder _binder = new LocalBinder();
+    private boolean _started = false;
     // Shark things
     private AndroidSharkEngine _engine;
-    private AndroidKP _kp;
 
+    private AndroidKP _kp;
     @Override
     public void onCreate() {
         _wifiManager = (WifiManager) this.getSystemService(Context.WIFI_SERVICE);
@@ -33,7 +42,7 @@ public class WifiDirectService extends Service {
         _wifiManager.setWifiEnabled(true);
 
         try {
-            Thread.sleep(2000);
+            Thread.sleep(5000);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -44,10 +53,15 @@ public class WifiDirectService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        L.d("Service started.", this);
 
         try {
-            _engine.startWifiDirect();
+            // Ensure that startWifiDirect() get only called one time.
+            if(!_started)
+                _started=true;
+            if(_started){
+                L.d("Service started.", this);
+                _engine.startWifiDirect();
+            }
         } catch (SharkProtocolNotSupportedException e) {
             e.printStackTrace();
         } catch (IOException e) {
@@ -60,8 +74,20 @@ public class WifiDirectService extends Service {
 
     @Override
     public IBinder onBind(Intent intent) {
-        // We don't provide binding, so return null
-        return null;
+        return _binder;
+    }
+
+    public void stop(){
+        try {
+            _engine.stopWifiDirect();
+            stopSelf();
+        } catch (SharkProtocolNotSupportedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void disconnect() {
+        _engine.disconnect();
     }
 
     @Override
@@ -76,18 +102,7 @@ public class WifiDirectService extends Service {
         L.d("Service destroyed.");
     }
 
-    public static boolean hotspotIsEnabled(Context context) {
-        try {
-            _wifiManager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
-            Method method = _wifiManager.getClass().getDeclaredMethod("isWifiApEnabled");
-            method.setAccessible(true);
-
-            return (Boolean) method.invoke(_wifiManager, (Object[]) null);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            L.d("Failed to check tethering state, or it is not enabled.");
-        }
-
-        return false;
+    public void connect(WifiDirectPeer peer){
+        _engine.connect(peer);
     }
 }

@@ -20,7 +20,11 @@ import java.util.Map;
  * Created by micha on 28.01.16.
  */
 @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
-public class WifiDirectListener implements WifiP2pManager.DnsSdTxtRecordListener, WifiDirectStatus, WifiP2pManager.PeerListListener {
+public class WifiDirectListener
+        implements WifiP2pManager.DnsSdTxtRecordListener,
+            WifiDirectStatus,
+            WifiP2pManager.PeerListListener,
+            WifiP2pManager.DnsSdServiceResponseListener{
 
     public final static String NEW_PEERS_ACTION = "net.sharksystem.android.wifi.p2p.NEW_PEERS";
     public final static String NEW_RECORDS_ACTION = "net.sharksystem.android.wifi.p2p.NEW_RECORDS";
@@ -102,5 +106,10 @@ public class WifiDirectListener implements WifiP2pManager.DnsSdTxtRecordListener
         }
         if (_context != null)
             Toast.makeText(this._context, toastText, Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onDnsSdServiceAvailable(String instanceName, String registrationType, WifiP2pDevice srcDevice) {
+
     }
 }
