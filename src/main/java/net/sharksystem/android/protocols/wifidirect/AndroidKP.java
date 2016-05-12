@@ -35,18 +35,15 @@ public class AndroidKP extends KnowledgePort {
 
     @Override
     protected void handleInsert(ASIPKnowledge asipKnowledge, ASIPConnection asipConnection) {
-        super.handleInsert(asipKnowledge, asipConnection);
     }
 
     @Override
     protected void handleExpose(ASIPInterest interest, ASIPConnection asipConnection) throws SharkKBException {
-        super.handleExpose(interest, asipConnection);
     }
 
     @Override
     protected void handleRaw(InputStream is, ASIPConnection asipConnection) {
         L.d("RAAAAAAWWWR!", this);
-        super.handleRaw(is, asipConnection);
     }
 
     @Override

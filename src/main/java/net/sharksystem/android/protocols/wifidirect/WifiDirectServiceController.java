@@ -1,11 +1,13 @@
 package net.sharksystem.android.protocols.wifidirect;
 
+import android.app.ActivityManager;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.os.IBinder;
@@ -39,7 +41,6 @@ public class WifiDirectServiceController
     public WifiDirectServiceController(Context context) {
         _context = context;
         _peers = new ArrayList<>();
-
 
         _intent = new Intent(_context, WifiDirectService.class);
         _context.startService(_intent);
@@ -87,6 +88,7 @@ public class WifiDirectServiceController
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(WifiDirectListener.NEW_PEERS_ACTION);
         intentFilter.addAction(WifiDirectListener.NEW_RECORDS_ACTION);
+        intentFilter.addAction(WifiDirectListener.CONNECTION_ESTABLISHED_ACTION);
         LocalBroadcastManager.getInstance(_context).registerReceiver(
                 this, intentFilter);
     }
@@ -115,6 +117,12 @@ public class WifiDirectServiceController
             _peers = intent.getParcelableArrayListExtra("WifiDirectPeers");
         } else if(WifiDirectListener.NEW_RECORDS_ACTION.equals(action)){
             _peers = intent.getParcelableArrayListExtra("WifiDirectPeers");
+        } else if(WifiDirectListener.CONNECTION_ESTABLISHED_ACTION.equals(action)){
+            WifiP2pGroup group = intent.getParcelableExtra("WifiP2PGroup");
+            WifiP2pInfo info = intent.getParcelableExtra("WifiP2PInfo");
+//            L.d(group.toString(), this);
+//            L.d(info.toString(), this);
+//            _wifiDirectService.sendMessage("RAAAAWWWRRR..!");
         }
     }
 
@@ -131,5 +139,15 @@ public class WifiDirectServiceController
         Toast.makeText(_context, "Service is disconnected", Toast.LENGTH_SHORT).show();
         _bound = false;
         _wifiDirectService = null;
+    }
+
+    private boolean isServiceRunning() {
+        ActivityManager manager = (ActivityManager) _context.getSystemService(Context.ACTIVITY_SERVICE);
+        for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
+            if (WifiDirectService.class.getName().equals(service.service.getClassName())) {
+                return true;
+            }
+        }
+        return false;
     }
 }

@@ -5,6 +5,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pDeviceList;
+import android.net.wifi.p2p.WifiP2pGroup;
+import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.os.Build;
 import android.support.v4.content.LocalBroadcastManager;
@@ -28,6 +30,7 @@ public class WifiDirectListener
 
     public final static String NEW_PEERS_ACTION = "net.sharksystem.android.wifi.p2p.NEW_PEERS";
     public final static String NEW_RECORDS_ACTION = "net.sharksystem.android.wifi.p2p.NEW_RECORDS";
+    public final static String CONNECTION_ESTABLISHED_ACTION = "net.sharksystem.android.wifi.p2p.CONNECTION_ESTABLISHED";
 
     private static WifiDirectListener _instance = null;
     private Context _context = null;
@@ -76,6 +79,13 @@ public class WifiDirectListener
     private void sendBroadcast(String action) {
         Intent intent = new Intent(action);
         intent.putParcelableArrayListExtra("WifiDirectPeers", _peers);
+        _lbm.sendBroadcast(intent);
+    }
+
+    public void sendConnectionBroadcast(WifiP2pGroup group, WifiP2pInfo info){
+        Intent intent = new Intent(CONNECTION_ESTABLISHED_ACTION);
+        intent.putExtra("WifiP2PGroup", group);
+        intent.putExtra("WifiP2PInfo", info);
         _lbm.sendBroadcast(intent);
     }
 

@@ -203,13 +203,18 @@ public class WifiDirectStreamStub
 
     @TargetApi(19)
     public void sendMessage(String text) {
-        if(!text.isEmpty() && _isTcpStarted && _isStarted){
-            L.d("inside the loop?", this);
-            ByteArrayInputStream stream = new ByteArrayInputStream(text.getBytes(StandardCharsets.UTF_8));
+        final String message = text;
+//        if(!text.isEmpty() && _isTcpStarted && _isStarted){
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                ByteArrayInputStream stream = new ByteArrayInputStream(message.getBytes(StandardCharsets.UTF_8));
 
-            ASIPOutMessage outMessage = _engine.createASIPOutMessage(_peerSemanticTag.getAddresses(), _peerSemanticTag);
-            outMessage.raw(stream);
-        }
+                ASIPOutMessage outMessage = _engine.createASIPOutMessage(_peerSemanticTag.getAddresses(), _peerSemanticTag);
+                outMessage.raw(stream);
+            }
+        }).start();
+//        }
     }
 
     @Override
@@ -240,14 +245,7 @@ public class WifiDirectStreamStub
     }
 
     @Override
-    public void onConnectionInfoAvailable(WifiP2pInfo info) {
-
-//        _manager.requestGroupInfo(_channel, new WifiP2pManager.GroupInfoListener() {
-//                    @Override
-//                    public void onGroupInfoAvailable(WifiP2pGroup group) {
-//                        L.d("Group: " + group.toString(), this);
-//                    }
-//                });
+    public void onConnectionInfoAvailable(final WifiP2pInfo info) {
 
         String groupOwnerAddress = info.groupOwnerAddress.getHostAddress();
 //        L.d("Device address:" + groupOwnerAddress, this);
@@ -256,12 +254,12 @@ public class WifiDirectStreamStub
 //
 //        L.d("LocalAddress: " + getLocalAddress(), this);
 
-        _peerSemanticTag = InMemoSharkKB.createInMemoPeerSemanticTag("Receiver", "www.receiver.de", "tcp://"+groupOwnerAddress+":7070");
+        _peerSemanticTag = InMemoSharkKB.createInMemoPeerSemanticTag("Receiver", "www.receiver.de", "tcp://"+groupOwnerAddress+":7071");
 
         if (info.groupFormed && info.isGroupOwner) {
 
             try {
-                _engine.startTCP(7070);
+                _engine.startTCP(7071);
                 _isTcpStarted = true;
             } catch (IOException e) {
                 e.printStackTrace();
@@ -271,12 +269,14 @@ public class WifiDirectStreamStub
             // One common case is creating a server thread and accepting
             // incoming connections.
         } else if (info.groupFormed) {
-            try {
-                _engine.startTCP(7070);
-                _isTcpStarted = true;
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            _isTcpStarted = true;
+            sendMessage("Rawwr.");
+//            try {
+//                _engine.startTCP(7070);
+//                _isTcpStarted = true;
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
             // The other device acts as the client. In this case,
             // you'll want to create a client thread that connects to the group
             // owner.
@@ -284,13 +284,12 @@ public class WifiDirectStreamStub
         // After the group negotiation, we can determine the group owner.
         _wifiDirectListener.onStatusChanged(WifiDirectStatus.CONNECTED);
 
-        L.d("Wait few seconds before sending a Message", this);
-        try {
-            Thread.sleep(5000);
-            sendMessage("Hallo?");
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        _manager.requestGroupInfo(_channel, new WifiP2pManager.GroupInfoListener() {
+            @Override
+            public void onGroupInfoAvailable(WifiP2pGroup group) {
+                _wifiDirectListener.sendConnectionBroadcast(group, info);
+            }
+        });
 
     }
 

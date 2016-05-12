@@ -3,6 +3,7 @@ package net.sharksystem.android.peer;
 import android.app.Activity;
 import android.content.Context;
 
+import net.sharkfw.asip.ASIPSpace;
 import net.sharkfw.asip.SharkStub;
 import net.sharkfw.kep.SharkProtocolNotSupportedException;
 import net.sharkfw.peer.J2SEAndroidSharkEngine;
@@ -102,9 +103,14 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine {
 
     @Override
     public Stub getProtocolStub(int type) throws SharkProtocolNotSupportedException {
+        return super.getProtocolStub(type);
         //TODO this function is called by the parent but the parent function itself look likes a big mess
         // and it does not look like it is designed to work with start/stop methods.
-        return currentStub;
+//        return currentStub;
+    }
+
+    public void startOffer(ASIPSpace space){
+
     }
 
     public void sendWifiMessage(String text) {
