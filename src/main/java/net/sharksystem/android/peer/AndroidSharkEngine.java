@@ -6,9 +6,14 @@ import android.content.Context;
 import net.sharkfw.asip.ASIPSpace;
 import net.sharkfw.asip.SharkStub;
 import net.sharkfw.kep.SharkProtocolNotSupportedException;
+import net.sharkfw.knowledgeBase.STSet;
+import net.sharkfw.knowledgeBase.SemanticTag;
+import net.sharkfw.knowledgeBase.SharkKBException;
+import net.sharkfw.knowledgeBase.inmemory.InMemoSharkKB;
 import net.sharkfw.peer.J2SEAndroidSharkEngine;
 import net.sharkfw.protocols.RequestHandler;
 import net.sharkfw.protocols.Stub;
+import net.sharkfw.system.SharkNotSupportedException;
 import net.sharksystem.android.protocols.nfc.NfcMessageStub;
 import net.sharksystem.android.protocols.wifidirect.WifiDirectPeer;
 import net.sharksystem.android.protocols.wifidirect.WifiDirectStreamStub;
@@ -48,7 +53,9 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine {
 
     @Override
     public void startWifiDirect() throws SharkProtocolNotSupportedException, IOException {
-        this.createWifiDirectStreamStub(this.getAsipStub()).start();
+//        this.createWifiDirectStreamStub(this.getAsipStub()).start();
+        this.createWifiDirectStreamStub(this.getAsipStub());
+        offerInterest("TestTopic");
     }
 
     public void stopWifiDirect() throws SharkProtocolNotSupportedException {
@@ -109,11 +116,27 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine {
 //        return currentStub;
     }
 
-    public void startOffer(ASIPSpace space){
+    public void offerInterest(String topic){
+        if(topic.isEmpty())
+           return;
+
+        STSet set = InMemoSharkKB.createInMemoSTSet();
+        ASIPSpace space;
+        try {
+            set.createSemanticTag(topic, "www."+topic+".sharksystem.net");
+            space =  InMemoSharkKB.createInMemoASIPInterest(set, null, getOwner(), null, null, null, null, ASIPSpace.DIRECTION_INOUT);
+            currentStub.offer(space);
+        } catch (SharkKBException e) {
+            e.printStackTrace();
+        } catch (SharkNotSupportedException e) {
+            e.printStackTrace();
+        }
 
     }
 
     public void sendWifiMessage(String text) {
         ((WifiDirectStreamStub) currentStub).sendMessage(text);
     }
+
+
 }

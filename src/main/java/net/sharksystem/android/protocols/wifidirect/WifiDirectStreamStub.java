@@ -18,8 +18,10 @@ import android.os.Handler;
 
 import net.sharkfw.asip.ASIPSpace;
 import net.sharkfw.asip.engine.ASIPOutMessage;
+import net.sharkfw.asip.engine.ASIPSerializer;
 import net.sharkfw.knowledgeBase.Knowledge;
 import net.sharkfw.knowledgeBase.PeerSemanticTag;
+import net.sharkfw.knowledgeBase.SharkKBException;
 import net.sharkfw.knowledgeBase.inmemory.InMemoSharkKB;
 import net.sharkfw.protocols.RequestHandler;
 import net.sharkfw.protocols.StreamConnection;
@@ -58,7 +60,10 @@ public class WifiDirectStreamStub
     private WifiDirectListener _wifiDirectListener;
     private boolean _receiverRegistered = false;
     private boolean _isTcpStarted;
+
+    // ASIP
     private PeerSemanticTag _peerSemanticTag;
+    private ASIPSpace _interest;
 
     public WifiDirectStreamStub(Context context, AndroidSharkEngine engine) {
         _context = context;
@@ -132,9 +137,19 @@ public class WifiDirectStreamStub
         _manager.clearLocalServices(_channel, null);
 
         Map<String, String> txtRecordMap = new HashMap<>();
-        txtRecordMap.put("entry0", getLocalAddress());
-        txtRecordMap.put("entry1", "This is just a test");
-        txtRecordMap.put("entry2", "to check if discovering is working");
+        if(_interest != null){
+            String parsed = "";
+            try {
+                parsed = ASIPSerializer.serializeASIPSpace(_interest).toString();
+                txtRecordMap.put("interest", parsed);
+            } catch (SharkKBException e) {
+                e.printStackTrace();
+            }
+        } else{
+            txtRecordMap.put("entry0", getLocalAddress());
+            txtRecordMap.put("entry1", "This is just a test");
+            txtRecordMap.put("entry2", "to check if discovering is working");
+        }
         _serviceInfo = WifiP2pDnsSdServiceInfo.newInstance("_shark", "_presence._tcp", txtRecordMap);
 
         _manager.addLocalService(_channel, _serviceInfo, new WifiP2pManager.ActionListener() {
@@ -322,7 +337,20 @@ public class WifiDirectStreamStub
 
     @Override
     public void offer(ASIPSpace asipSpace) throws SharkNotSupportedException {
-
+        _interest = asipSpace;
+        if(_isStarted){
+            stop();
+            try {
+                Thread.sleep(3000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        try {
+            start();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
