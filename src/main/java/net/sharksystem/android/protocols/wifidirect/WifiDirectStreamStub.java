@@ -16,10 +16,12 @@ import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceRequest;
 import android.os.Build;
 import android.os.Handler;
 
+import net.sharkfw.asip.ASIPKnowledge;
 import net.sharkfw.asip.ASIPSpace;
 import net.sharkfw.asip.engine.ASIPOutMessage;
 import net.sharkfw.asip.engine.ASIPSerializer;
 import net.sharkfw.knowledgeBase.Knowledge;
+import net.sharkfw.knowledgeBase.PeerSTSet;
 import net.sharkfw.knowledgeBase.PeerSemanticTag;
 import net.sharkfw.knowledgeBase.SharkKBException;
 import net.sharkfw.knowledgeBase.inmemory.InMemoSharkKB;
@@ -35,6 +37,7 @@ import java.io.ByteArrayInputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -64,16 +67,22 @@ public class WifiDirectStreamStub
     // ASIP
     private PeerSemanticTag _peerSemanticTag;
     private ASIPSpace _interest;
+    private Knowledge _knowledge;
+
+    private ArrayList<WifiDirectPeer> _peers = new ArrayList<>();
 
     public WifiDirectStreamStub(Context context, AndroidSharkEngine engine) {
         _context = context;
         _engine = engine;
+
+
 
         threadHandler = new Handler();
         thread = new Runnable() {
             @Override
             public void run() {
                 startServiceDiscovery();
+                _peers = _wifiDirectListener.getPeers();
                 threadHandler.postDelayed(this, 10000);
             }
         };
@@ -81,7 +90,7 @@ public class WifiDirectStreamStub
         _manager = (WifiP2pManager) _context.getSystemService(Context.WIFI_P2P_SERVICE);
         _channel =_manager.initialize(_context, _context.getMainLooper(), null);
 
-        _wifiDirectListener = WifiDirectListener.getInstance(_context);
+        _wifiDirectListener = new WifiDirectListener(_context);
         _manager.setDnsSdResponseListeners(_channel, _wifiDirectListener, _wifiDirectListener);
         _wifiDirectListener.onStatusChanged(WifiDirectStatus.INITIATED);
     }
@@ -96,7 +105,7 @@ public class WifiDirectStreamStub
             intentFilter.addAction(WifiP2pManager.WIFI_P2P_DISCOVERY_CHANGED_ACTION);
             intentFilter.addAction(WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION);
             _context.registerReceiver(this, intentFilter);
-            _receiverRegistered=true;
+            _receiverRegistered = true;
             L.d("Receiver registered", this);
         }
     }
@@ -125,9 +134,7 @@ public class WifiDirectStreamStub
             registerReceiver();
             addServiceAdvertiser();
             addServiceRequest();
-            startServiceDiscovery();
-//            _manager.discoverPeers(_channel, new WifiActionListener("Discover Peers"));
-            threadHandler.postDelayed(thread, 10000);
+            threadHandler.post(thread);
             _wifiDirectListener.onStatusChanged(WifiDirectStatus.DISCOVERING);
             _isStarted=true;
         }
@@ -183,7 +190,6 @@ public class WifiDirectStreamStub
     }
 
     public void connect(WifiDirectPeer peer) {
-        L.d("Connect to peer: " + peer.getName(), this);
         final WifiP2pConfig config = new WifiP2pConfig();
         config.deviceAddress = peer.getDevice().deviceAddress;
         config.wps.setup = WpsInfo.PBC;
@@ -219,7 +225,6 @@ public class WifiDirectStreamStub
     @TargetApi(19)
     public void sendMessage(String text) {
         final String message = text;
-//        if(!text.isEmpty() && _isTcpStarted && _isStarted){
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -229,14 +234,11 @@ public class WifiDirectStreamStub
                 outMessage.raw(stream);
             }
         }).start();
-//        }
     }
 
     @Override
     public void onReceive(Context context, Intent intent) {
         String action = intent.getAction();
-
-//        L.d(action, this);
 
         if(_manager==null)
             return;
@@ -263,12 +265,6 @@ public class WifiDirectStreamStub
     public void onConnectionInfoAvailable(final WifiP2pInfo info) {
 
         String groupOwnerAddress = info.groupOwnerAddress.getHostAddress();
-//        L.d("Device address:" + groupOwnerAddress, this);
-//
-//        L.d(info.toString(), this);
-//
-//        L.d("LocalAddress: " + getLocalAddress(), this);
-
         _peerSemanticTag = InMemoSharkKB.createInMemoPeerSemanticTag("Receiver", "www.receiver.de", "tcp://"+groupOwnerAddress+":7071");
 
         if (info.groupFormed && info.isGroupOwner) {
@@ -286,12 +282,6 @@ public class WifiDirectStreamStub
         } else if (info.groupFormed) {
             _isTcpStarted = true;
             sendMessage("Rawwr.");
-//            try {
-//                _engine.startTCP(7070);
-//                _isTcpStarted = true;
-//            } catch (IOException e) {
-//                e.printStackTrace();
-//            }
             // The other device acts as the client. In this case,
             // you'll want to create a client thread that connects to the group
             // owner.
@@ -357,4 +347,30 @@ public class WifiDirectStreamStub
     public void offer(Knowledge knowledge) throws SharkNotSupportedException {
 
     }
+
+    public void sendBroadcast(String text) {
+
+        _knowledge = InMemoSharkKB.createInMemoKnowledge();
+        try {
+            PeerSTSet approvers = InMemoSharkKB.createInMemoPeerSTSet();
+            approvers.merge(_engine.getOwner());
+            ASIPSpace space = InMemoSharkKB.createInMemoASIPInterest(null,null, _engine.getOwner(), approvers, null, null, null, ASIPSpace.DIRECTION_INOUT);
+            _knowledge.addInformation(text, space);
+        } catch (SharkKBException e) {
+            e.printStackTrace();
+        }
+
+        // Now do something
+
+//        new Thread(new Runnable() {
+//            @TargetApi(Build.VERSION_CODES.KITKAT)
+//            @Override
+//            public void run() {
+//
+//                ASIPOutMessage outMessage = _engine.createASIPOutMessage(_peerSemanticTag.getAddresses(), _peerSemanticTag);
+//                outMessage.raw(stream);
+//            }
+//        }).start();
+    }
+
 }

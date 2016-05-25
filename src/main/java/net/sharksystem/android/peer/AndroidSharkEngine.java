@@ -139,4 +139,7 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine {
     }
 
 
+    public void sendBroadcast(String text) {
+        ((WifiDirectStreamStub) currentStub).sendBroadcast(text);
+    }
 }

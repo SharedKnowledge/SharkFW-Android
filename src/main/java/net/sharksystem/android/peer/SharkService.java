@@ -28,15 +28,15 @@ public class SharkService extends Service {
         }
 
     }
+
     private static WifiManager _wifiManager;
     private IBinder _binder = new LocalBinder();
     private boolean _isStarted = false;
-
     // Shark things
     private boolean _isEngineStarted = false;
+
     private AndroidSharkEngine _engine;
     private KnowledgePort _kp;
-
     @Override
     public void onCreate() {
 //        testing();
@@ -106,6 +106,10 @@ public class SharkService extends Service {
 
     public void sendMessage(String text) {
         _engine.sendWifiMessage(text);
+    }
+
+    public void sendBroadcast(String text) {
+        _engine.sendBroadcast(text);
     }
 
     public void testing(){

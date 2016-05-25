@@ -136,4 +136,6 @@ public class SharkServiceController
     public void sendMessage(String text){
         _sharkService.sendMessage(text);
     }
+
+    public void sendBroadcast(String text){ _sharkService.sendBroadcast(text);}
 }

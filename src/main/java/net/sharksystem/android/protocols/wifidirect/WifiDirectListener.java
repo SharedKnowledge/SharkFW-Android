@@ -28,29 +28,25 @@ public class WifiDirectListener
             WifiP2pManager.PeerListListener,
             WifiP2pManager.DnsSdServiceResponseListener{
 
+    public interface WifiDirectPeerListener{
+        public ArrayList<WifiDirectPeer> onPeersAvailable();
+    }
+
     public final static String NEW_PEERS_ACTION = "net.sharksystem.android.wifi.p2p.NEW_PEERS";
     public final static String NEW_RECORDS_ACTION = "net.sharksystem.android.wifi.p2p.NEW_RECORDS";
     public final static String CONNECTION_ESTABLISHED_ACTION = "net.sharksystem.android.wifi.p2p.CONNECTION_ESTABLISHED";
 
-    private static WifiDirectListener _instance = null;
     private Context _context = null;
     private LocalBroadcastManager _lbm;
 
     private ArrayList<WifiDirectPeer> _peers = new ArrayList<>();
 
-    private WifiDirectListener(Context context) {
+    protected WifiDirectListener(Context context) {
         _context = context;
         _lbm = LocalBroadcastManager.getInstance(_context);
     }
 
-    public static WifiDirectListener getInstance(Context context) {
-        if (WifiDirectListener._instance == null) {
-            WifiDirectListener._instance = new WifiDirectListener(context);
-        }
-        return WifiDirectListener._instance;
-    }
-
-    public List<WifiDirectPeer> getPeers() {
+    public ArrayList<WifiDirectPeer> getPeers() {
         return _peers;
     }
 
