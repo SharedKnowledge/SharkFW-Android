@@ -8,10 +8,11 @@ import android.os.Binder;
 import android.os.IBinder;
 
 import net.sharkfw.kep.SharkProtocolNotSupportedException;
+import net.sharkfw.knowledgeBase.inmemory.InMemoSharkKB;
+import net.sharkfw.kp.FilterKP;
 import net.sharkfw.peer.KnowledgePort;
-import net.sharkfw.peer.SharkEngine;
 import net.sharkfw.system.L;
-import net.sharksystem.android.protocols.wifidirect.AndroidKP;
+import net.sharksystem.android.protocols.wifidirect.WifiDirectKPNotifier;
 import net.sharksystem.android.protocols.wifidirect.WifiDirectPeer;
 
 import java.io.IOException;
@@ -23,11 +24,9 @@ import java.util.ArrayList;
 public class SharkService extends Service {
 
     public class LocalBinder extends Binder {
-
         public SharkService getInstance() {
             return SharkService.this;
         }
-
     }
 
     private static WifiManager _wifiManager;
@@ -38,11 +37,14 @@ public class SharkService extends Service {
 
     private AndroidSharkEngine _engine;
     private ArrayList<KnowledgePort> _knowledgePorts;
+    private WifiDirectKPNotifier _kpNotifier;
+
 
     @Override
     public void onCreate() {
         _engine = new AndroidSharkEngine(this);
         _knowledgePorts = new ArrayList<>();
+        _kpNotifier = new WifiDirectKPNotifier(this);
     }
 
     public void addKP(KnowledgePort kp){
@@ -54,7 +56,7 @@ public class SharkService extends Service {
         L.d("Starting", this);
         if(!_isEngineStarted){
             if(_knowledgePorts.isEmpty())
-                addKP(new AndroidKP(_engine));
+                addKP(new FilterKP(_engine, InMemoSharkKB.createInMemoASIPInterest(),_kpNotifier ));
             try {
                 _engine.startWifiDirect();
             } catch (IOException e) {
