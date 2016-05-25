@@ -15,6 +15,7 @@ import net.sharksystem.android.protocols.wifidirect.AndroidKP;
 import net.sharksystem.android.protocols.wifidirect.WifiDirectPeer;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
 /**
  * Created by j4rvis on 12.04.16.
@@ -36,28 +37,24 @@ public class SharkService extends Service {
     private boolean _isEngineStarted = false;
 
     private AndroidSharkEngine _engine;
-    private KnowledgePort _kp;
+    private ArrayList<KnowledgePort> _knowledgePorts;
+
     @Override
     public void onCreate() {
-//        testing();
+        _engine = new AndroidSharkEngine(this);
+        _knowledgePorts = new ArrayList<>();
     }
 
-    public void setEngine(AndroidSharkEngine engine){
-        _engine = engine;
-    }
-
-    public void setKP(KnowledgePort kp){
-        _kp = kp;
+    public void addKP(KnowledgePort kp){
+        if(!_knowledgePorts.contains(kp))
+            _knowledgePorts.add(kp);
     }
 
     public void startEngine(){
         L.d("Starting", this);
         if(!_isEngineStarted){
-            if(_engine==null)
-                _engine = new AndroidSharkEngine(this);
-            if(_kp==null)
-                _kp = new AndroidKP(_engine);
-
+            if(_knowledgePorts.isEmpty())
+                addKP(new AndroidKP(_engine));
             try {
                 _engine.startWifiDirect();
             } catch (IOException e) {
