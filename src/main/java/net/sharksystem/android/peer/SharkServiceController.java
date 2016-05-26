@@ -14,6 +14,7 @@ import android.support.v4.content.LocalBroadcastManager;
 import android.widget.Toast;
 
 import net.sharkfw.system.L;
+import net.sharksystem.android.protocols.wifidirect.WifiDirectKPNotifier;
 import net.sharksystem.android.protocols.wifidirect.WifiDirectListener;
 import net.sharksystem.android.protocols.wifidirect.WifiDirectPeer;
 
@@ -90,9 +91,7 @@ public class SharkServiceController
 
     private void registerReceiver(){
         IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction(WifiDirectListener.NEW_PEERS_ACTION);
-        intentFilter.addAction(WifiDirectListener.NEW_RECORDS_ACTION);
-        intentFilter.addAction(WifiDirectListener.CONNECTION_ESTABLISHED_ACTION);
+        intentFilter.addAction(WifiDirectKPNotifier.NEW_INTEREST_ACTION);
         LocalBroadcastManager.getInstance(_context).registerReceiver(
                 this, intentFilter);
     }
@@ -101,13 +100,9 @@ public class SharkServiceController
     public void onReceive(Context context, Intent intent) {
         String action = intent.getAction();
 
-        if(WifiDirectListener.NEW_PEERS_ACTION.equals(action)){
+        if(WifiDirectKPNotifier.NEW_INTEREST_ACTION.equals(action)){
+            L.d("Interest received " + action, this);
             _peers = intent.getParcelableArrayListExtra("WifiDirectPeers");
-        } else if(WifiDirectListener.NEW_RECORDS_ACTION.equals(action)){
-            _peers = intent.getParcelableArrayListExtra("WifiDirectPeers");
-        } else if(WifiDirectListener.CONNECTION_ESTABLISHED_ACTION.equals(action)){
-            WifiP2pGroup group = intent.getParcelableExtra("WifiP2PGroup");
-            WifiP2pInfo info = intent.getParcelableExtra("WifiP2PInfo");
         }
     }
 
@@ -129,13 +124,13 @@ public class SharkServiceController
         _sharkService.connect(peer);
     }
 
-    public void disconnect(){
-        _sharkService.disconnect();
-    }
+//    public void disconnect(){
+//        _sharkService.disconnect();
+//    }
 
-    public void sendMessage(String text){
-        _sharkService.sendMessage(text);
-    }
+//    public void sendMessage(String text){
+//        _sharkService.sendMessage(text);
+//    }
 
-    public void sendBroadcast(String text){ _sharkService.sendBroadcast(text);}
+    public void sendBroadcast(String text){ }
 }

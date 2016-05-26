@@ -70,9 +70,9 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine {
         ((WifiDirectStreamStub) currentStub).connect(peer);
     }
 
-    public void disconnect(){
-        ((WifiDirectStreamStub) currentStub).disconnect();
-    }
+//    public void disconnect(){
+//        ((WifiDirectStreamStub) currentStub).disconnect();
+//    }
 
     @Override
     protected Stub createNfcStreamStub(SharkStub stub) throws SharkProtocolNotSupportedException {
@@ -134,9 +134,9 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine {
 
     }
 
-    public void sendWifiMessage(String text) {
-        ((WifiDirectStreamStub) currentStub).sendMessage(text);
-    }
+//    public void sendWifiMessage(String text) {
+//        ((WifiDirectStreamStub) currentStub).sendMessage(text);
+//    }
 
 
     public void sendBroadcast(String text) {

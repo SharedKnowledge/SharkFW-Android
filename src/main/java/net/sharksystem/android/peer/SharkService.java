@@ -95,21 +95,21 @@ public class SharkService extends Service {
         return _binder;
     }
 
-    public void disconnect() {
-        _engine.disconnect();
-    }
+//    public void disconnect() {
+//        _engine.disconnect();
+//    }
 
     public void connect(WifiDirectPeer peer){
         _engine.connect(peer);
     }
 
-    public void sendMessage(String text) {
-        _engine.sendWifiMessage(text);
-    }
+//    public void sendMessage(String text) {
+//        _engine.sendWifiMessage(text);
+//    }
 
-    public void sendBroadcast(String text) {
-        _engine.sendBroadcast(text);
-    }
+//    public void sendBroadcast(String text) {
+//        _engine.sendBroadcast(text);
+//    }
 
     public void testing(){
 

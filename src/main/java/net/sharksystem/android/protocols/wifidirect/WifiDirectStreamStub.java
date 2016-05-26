@@ -1,44 +1,31 @@
 package net.sharksystem.android.protocols.wifidirect;
 
 import android.annotation.TargetApi;
-import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
-import android.net.NetworkInfo;
-import android.net.wifi.WpsInfo;
-import android.net.wifi.p2p.WifiP2pConfig;
+import android.net.wifi.p2p.WifiP2pDevice;
+import android.net.wifi.p2p.WifiP2pDeviceList;
 import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
-import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceInfo;
-import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceRequest;
 import android.os.Build;
-import android.os.Handler;
 
-import net.sharkfw.asip.ASIPKnowledge;
 import net.sharkfw.asip.ASIPSpace;
-import net.sharkfw.asip.engine.ASIPOutMessage;
-import net.sharkfw.asip.engine.ASIPSerializer;
 import net.sharkfw.knowledgeBase.Knowledge;
 import net.sharkfw.knowledgeBase.PeerSTSet;
 import net.sharkfw.knowledgeBase.PeerSemanticTag;
+import net.sharkfw.knowledgeBase.STSet;
 import net.sharkfw.knowledgeBase.SharkKBException;
 import net.sharkfw.knowledgeBase.inmemory.InMemoSharkKB;
 import net.sharkfw.protocols.RequestHandler;
 import net.sharkfw.protocols.StreamConnection;
 import net.sharkfw.protocols.StreamStub;
-import net.sharkfw.system.L;
 import net.sharkfw.system.SharkNotSupportedException;
 import net.sharksystem.android.peer.AndroidSharkEngine;
 
 import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
 import java.io.FileReader;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -46,23 +33,16 @@ import java.util.Map;
  */
 @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
 public class WifiDirectStreamStub
-        extends BroadcastReceiver
-        implements StreamStub, WifiP2pManager.ConnectionInfoListener{
+        implements StreamStub,
+        WifiP2pManager.ConnectionInfoListener,
+        WifiP2pManager.DnsSdTxtRecordListener,
+        WifiP2pManager.GroupInfoListener {
 
     private final AndroidSharkEngine _engine;
+    private final WifiDirectManager _wifiDirectManager;
     private Context _context;
 
-    private boolean _isStarted = false;
     private WifiP2pManager _manager;
-    private WifiP2pManager.Channel _channel;
-    private WifiP2pDnsSdServiceInfo _serviceInfo;
-
-    private Handler threadHandler;
-    private Runnable thread;
-
-    private WifiDirectListener _wifiDirectListener;
-    private boolean _receiverRegistered = false;
-    private boolean _isTcpStarted;
 
     // ASIP
     private PeerSemanticTag _peerSemanticTag;
@@ -70,194 +50,54 @@ public class WifiDirectStreamStub
     private Knowledge _knowledge;
 
     private ArrayList<WifiDirectPeer> _peers = new ArrayList<>();
+    private boolean _isStarted = false;
 
     public WifiDirectStreamStub(Context context, AndroidSharkEngine engine) {
         _context = context;
         _engine = engine;
 
-
-
-        threadHandler = new Handler();
-        thread = new Runnable() {
-            @Override
-            public void run() {
-                startServiceDiscovery();
-                _peers = _wifiDirectListener.getPeers();
-                threadHandler.postDelayed(this, 10000);
-            }
-        };
-
         _manager = (WifiP2pManager) _context.getSystemService(Context.WIFI_P2P_SERVICE);
-        _channel =_manager.initialize(_context, _context.getMainLooper(), null);
 
-        _wifiDirectListener = new WifiDirectListener(_context);
-        _manager.setDnsSdResponseListeners(_channel, _wifiDirectListener, _wifiDirectListener);
-        _wifiDirectListener.onStatusChanged(WifiDirectStatus.INITIATED);
-    }
-
-
-    private void registerReceiver(){
-        if(!_receiverRegistered){
-            IntentFilter intentFilter = new IntentFilter();
-            intentFilter.addAction(WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION);
-            intentFilter.addAction(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION);
-            intentFilter.addAction(WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION);
-            intentFilter.addAction(WifiP2pManager.WIFI_P2P_DISCOVERY_CHANGED_ACTION);
-            intentFilter.addAction(WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION);
-            _context.registerReceiver(this, intentFilter);
-            _receiverRegistered = true;
-            L.d("Receiver registered", this);
+        STSet topics = InMemoSharkKB.createInMemoSTSet();
+        ASIPSpace space = null;
+        try {
+            topics.createSemanticTag("Java", "www.java.com");
+            topics.createSemanticTag("Android", "www.android.com");
+            space = InMemoSharkKB.createInMemoASIPInterest(topics, null, _engine.getOwner(), null, null, null, null, ASIPSpace.DIRECTION_INOUT);
+        } catch (SharkKBException e) {
+            e.printStackTrace();
         }
+
+        _wifiDirectManager = new WifiDirectManager(_manager, _context, this, space);
+
     }
 
     @Override
     public void stop() {
-        if(_isStarted){
+        if (_isStarted) _isStarted = _wifiDirectManager.stop();
 
-            threadHandler.removeCallbacks(thread);
-            stopServiceDiscovery();
-//            _manager.stopPeerDiscovery(_channel, new WifiActionListener("Stop Peerdiscovering"));
-            removeServiceAdvertiser();
-            if(_receiverRegistered){
-                _context.unregisterReceiver(this);
-                _receiverRegistered=false;
-            }
-
-            _wifiDirectListener.onStatusChanged(WifiDirectStatus.STOPPED);
-            _isStarted=false;
-        }
     }
 
     @Override
     public void start() throws IOException {
-        if(!_isStarted){
-            registerReceiver();
-            addServiceAdvertiser();
-            addServiceRequest();
-            threadHandler.post(thread);
-            _wifiDirectListener.onStatusChanged(WifiDirectStatus.DISCOVERING);
-            _isStarted=true;
-        }
-    }
-
-    private void addServiceAdvertiser(){
-        _manager.clearLocalServices(_channel, null);
-
-        Map<String, String> txtRecordMap = new HashMap<>();
-        if(_interest != null){
-            String parsed = "";
-            try {
-                parsed = ASIPSerializer.serializeASIPSpace(_interest).toString();
-                txtRecordMap.put("interest", parsed);
-            } catch (SharkKBException e) {
-                e.printStackTrace();
-            }
-        } else{
-            txtRecordMap.put("entry0", getLocalAddress());
-            txtRecordMap.put("entry1", "This is just a test");
-            txtRecordMap.put("entry2", "to check if discovering is working");
-        }
-        _serviceInfo = WifiP2pDnsSdServiceInfo.newInstance("_shark", "_presence._tcp", txtRecordMap);
-
-        _manager.addLocalService(_channel, _serviceInfo, new WifiP2pManager.ActionListener() {
-            @Override
-            public void onSuccess() {
-//                _manager.createGroup(_channel, new WifiActionListener("Create Group"));
-            }
-
-            @Override
-            public void onFailure(int reason) {
-                L.d("Failed addServiceAdvertiser. Reason: " + reason, this);
-            }
-        });
-    }
-
-    private void removeServiceAdvertiser(){
-        _manager.clearLocalServices(_channel, new WifiActionListener("Clear LocalServices"));
-    }
-
-    private void addServiceRequest(){
-        WifiP2pDnsSdServiceRequest serviceRequest = WifiP2pDnsSdServiceRequest.newInstance();
-        _manager.addServiceRequest(_channel, serviceRequest, new WifiActionListener("Add ServiceRequest"));
-    }
-
-    private void startServiceDiscovery(){
-        _manager.discoverServices(_channel, new WifiActionListener("Discover services"));
-    }
-
-    private void stopServiceDiscovery(){
-        _manager.clearServiceRequests(_channel, new WifiActionListener("Clear ServiceRequests"));
+        if (!_isStarted) _isStarted = _wifiDirectManager.start();
     }
 
     public void connect(WifiDirectPeer peer) {
-        final WifiP2pConfig config = new WifiP2pConfig();
-        config.deviceAddress = peer.getDevice().deviceAddress;
-        config.wps.setup = WpsInfo.PBC;
-
-        _manager.connect(_channel, config, new WifiActionListener("Connect"));
-    }
-
-    public void disconnect() {
-        _manager.requestGroupInfo(_channel, new WifiP2pManager.GroupInfoListener() {
-            @Override
-            public void onGroupInfoAvailable(WifiP2pGroup group) {
-                if (group != null && _manager != null && _channel != null
-                        && group.isGroupOwner()) {
-
-                    _engine.stopTCP();
-                    _manager.removeGroup(_channel, new WifiP2pManager.ActionListener() {
-
-                        @Override
-                        public void onSuccess() {
-                            L.d("removeGroup onSuccess -", this);
-                        }
-
-                        @Override
-                        public void onFailure(int reason) {
-                            L.d("removeGroup onFailure -" + reason, this);
-                        }
-                    });
-                }
-            }
-        });
-    }
-
-    @TargetApi(19)
-    public void sendMessage(String text) {
-        final String message = text;
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                ByteArrayInputStream stream = new ByteArrayInputStream(message.getBytes(StandardCharsets.UTF_8));
-
-                ASIPOutMessage outMessage = _engine.createASIPOutMessage(_peerSemanticTag.getAddresses(), _peerSemanticTag);
-                outMessage.raw(stream);
-            }
-        }).start();
+        _wifiDirectManager.connect(peer);
     }
 
     @Override
-    public void onReceive(Context context, Intent intent) {
-        String action = intent.getAction();
-
-        if(_manager==null)
-            return;
-
-        if (WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION.equals(action)) {
-            int state = intent.getIntExtra(WifiP2pManager.EXTRA_WIFI_STATE, -1);
-            if (state == WifiP2pManager.WIFI_P2P_STATE_ENABLED) {
-//                setIsWifiP2pEnabled(true);
-            } else {
-//                setIsWifiP2pEnabled(false);
+    public void onDnsSdTxtRecordAvailable(String fullDomainName, Map<String, String> txtRecordMap, WifiP2pDevice srcDevice) {
+        WifiDirectPeer newPeer = new WifiDirectPeer(srcDevice, txtRecordMap);
+        if (this._peers.contains(newPeer)) {
+            WifiDirectPeer peer = this._peers.get(this._peers.indexOf(newPeer));
+            if (peer.getLastUpdated() < newPeer.getLastUpdated()) {
+                this._peers.remove(peer);
+                this._peers.add(newPeer);
             }
-        } else if (WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION.equals(action)) {
-//            if (_state != WifiDirectStreamStubState.READY)
-            _manager.requestPeers(_channel, _wifiDirectListener);
-        } else if (WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION.equals(action)) {
-            NetworkInfo networkInfo = (NetworkInfo) intent.getParcelableExtra(WifiP2pManager.EXTRA_NETWORK_INFO);
-            if(networkInfo.isConnected()){
-                _manager.requestConnectionInfo(_channel, WifiDirectStreamStub.this);
-            }
+        } else {
+            this._peers.add(newPeer);
         }
     }
 
@@ -265,13 +105,12 @@ public class WifiDirectStreamStub
     public void onConnectionInfoAvailable(final WifiP2pInfo info) {
 
         String groupOwnerAddress = info.groupOwnerAddress.getHostAddress();
-        _peerSemanticTag = InMemoSharkKB.createInMemoPeerSemanticTag("Receiver", "www.receiver.de", "tcp://"+groupOwnerAddress+":7071");
+        _peerSemanticTag = InMemoSharkKB.createInMemoPeerSemanticTag("Receiver", "www.receiver.de", "tcp://" + groupOwnerAddress + ":7071");
 
         if (info.groupFormed && info.isGroupOwner) {
 
             try {
                 _engine.startTCP(7071);
-                _isTcpStarted = true;
             } catch (IOException e) {
                 e.printStackTrace();
             } finally {
@@ -280,22 +119,19 @@ public class WifiDirectStreamStub
             // One common case is creating a server thread and accepting
             // incoming connections.
         } else if (info.groupFormed) {
-            _isTcpStarted = true;
-            sendMessage("Rawwr.");
-            // The other device acts as the client. In this case,
+            // The device acts as the client. In this case,
             // you'll want to create a client thread that connects to the group
             // owner.
         }
         // After the group negotiation, we can determine the group owner.
-        _wifiDirectListener.onStatusChanged(WifiDirectStatus.CONNECTED);
+//        _wifiDirectListener.onStatusChanged(WifiDirectStatus.CONNECTED);
 
-        _manager.requestGroupInfo(_channel, new WifiP2pManager.GroupInfoListener() {
+        _wifiDirectManager.requestGroupInfo(new WifiP2pManager.GroupInfoListener() {
             @Override
             public void onGroupInfoAvailable(WifiP2pGroup group) {
-                _wifiDirectListener.sendConnectionBroadcast(group, info);
+
             }
         });
-
     }
 
     @Override
@@ -327,20 +163,7 @@ public class WifiDirectStreamStub
 
     @Override
     public void offer(ASIPSpace asipSpace) throws SharkNotSupportedException {
-        _interest = asipSpace;
-        if(_isStarted){
-            stop();
-            try {
-                Thread.sleep(3000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-        try {
-            start();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        _wifiDirectManager.offerInterest(asipSpace);
     }
 
     @Override
@@ -354,23 +177,16 @@ public class WifiDirectStreamStub
         try {
             PeerSTSet approvers = InMemoSharkKB.createInMemoPeerSTSet();
             approvers.merge(_engine.getOwner());
-            ASIPSpace space = InMemoSharkKB.createInMemoASIPInterest(null,null, _engine.getOwner(), approvers, null, null, null, ASIPSpace.DIRECTION_INOUT);
+            ASIPSpace space = InMemoSharkKB.createInMemoASIPInterest(null, null, _engine.getOwner(), approvers, null, null, null, ASIPSpace.DIRECTION_INOUT);
             _knowledge.addInformation(text, space);
         } catch (SharkKBException e) {
             e.printStackTrace();
         }
-
-        // Now do something
-
-//        new Thread(new Runnable() {
-//            @TargetApi(Build.VERSION_CODES.KITKAT)
-//            @Override
-//            public void run() {
-//
-//                ASIPOutMessage outMessage = _engine.createASIPOutMessage(_peerSemanticTag.getAddresses(), _peerSemanticTag);
-//                outMessage.raw(stream);
-//            }
-//        }).start();
     }
 
+
+    @Override
+    public void onGroupInfoAvailable(WifiP2pGroup group) {
+
+    }
 }
