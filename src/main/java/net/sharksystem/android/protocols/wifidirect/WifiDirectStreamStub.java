@@ -9,7 +9,9 @@ import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.os.Build;
 
+import net.sharkfw.asip.ASIPInterest;
 import net.sharkfw.asip.ASIPSpace;
+import net.sharkfw.asip.engine.ASIPInMessage;
 import net.sharkfw.knowledgeBase.Knowledge;
 import net.sharkfw.knowledgeBase.PeerSTSet;
 import net.sharkfw.knowledgeBase.PeerSemanticTag;
@@ -19,6 +21,7 @@ import net.sharkfw.knowledgeBase.inmemory.InMemoSharkKB;
 import net.sharkfw.protocols.RequestHandler;
 import net.sharkfw.protocols.StreamConnection;
 import net.sharkfw.protocols.StreamStub;
+import net.sharkfw.system.L;
 import net.sharkfw.system.SharkNotSupportedException;
 import net.sharksystem.android.peer.AndroidSharkEngine;
 
@@ -49,7 +52,7 @@ public class WifiDirectStreamStub
     private ASIPSpace _interest;
     private Knowledge _knowledge;
 
-    private ArrayList<WifiDirectPeer> _peers = new ArrayList<>();
+//    private ArrayList<WifiDirectPeer> _peers = new ArrayList<>();
     private boolean _isStarted = false;
 
     public WifiDirectStreamStub(Context context, AndroidSharkEngine engine) {
@@ -89,16 +92,13 @@ public class WifiDirectStreamStub
 
     @Override
     public void onDnsSdTxtRecordAvailable(String fullDomainName, Map<String, String> txtRecordMap, WifiP2pDevice srcDevice) {
-        WifiDirectPeer newPeer = new WifiDirectPeer(srcDevice, txtRecordMap);
-        if (this._peers.contains(newPeer)) {
-            WifiDirectPeer peer = this._peers.get(this._peers.indexOf(newPeer));
-            if (peer.getLastUpdated() < newPeer.getLastUpdated()) {
-                this._peers.remove(peer);
-                this._peers.add(newPeer);
-            }
-        } else {
-            this._peers.add(newPeer);
-        }
+
+        WifiDirectPeer peer = new WifiDirectPeer(srcDevice, txtRecordMap);
+        ASIPInMessage msg = new ASIPInMessage(_engine, peer.getInterest(), _engine.getAsipStub());
+        msg.setTtl(10);
+        msg.setSender(peer.getTag());
+
+        _engine.getAsipStub().callListener(msg);
     }
 
     @Override
@@ -113,7 +113,6 @@ public class WifiDirectStreamStub
                 _engine.startTCP(7071);
             } catch (IOException e) {
                 e.printStackTrace();
-            } finally {
             }
             // Do whatever tasks are specific to the group owner.
             // One common case is creating a server thread and accepting

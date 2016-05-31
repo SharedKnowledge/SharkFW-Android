@@ -54,8 +54,8 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine {
     @Override
     public void startWifiDirect() throws SharkProtocolNotSupportedException, IOException {
 //        this.createWifiDirectStreamStub(this.getAsipStub()).start();
-        this.createWifiDirectStreamStub(this.getAsipStub());
-        offerInterest("TestTopic");
+        this.createWifiDirectStreamStub(this.getAsipStub()).start();
+//        offerInterest("TestTopic");
     }
 
     public void stopWifiDirect() throws SharkProtocolNotSupportedException {

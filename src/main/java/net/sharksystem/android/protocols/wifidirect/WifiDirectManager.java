@@ -155,7 +155,7 @@ public class WifiDirectManager
 
     public void connect(WifiDirectPeer peer){
         final WifiP2pConfig config = new WifiP2pConfig();
-        config.deviceAddress = peer.getDevice().deviceAddress;
+        config.deviceAddress = peer.deviceAddress;
         config.wps.setup = WpsInfo.PBC;
         _manager.connect(_channel, config, new WifiActionListener("Connect"));
     }

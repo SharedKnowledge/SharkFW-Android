@@ -13,6 +13,9 @@ import android.os.IBinder;
 import android.support.v4.content.LocalBroadcastManager;
 import android.widget.Toast;
 
+import net.sharkfw.asip.ASIPInterest;
+import net.sharkfw.asip.engine.ASIPSerializer;
+import net.sharkfw.knowledgeBase.SharkKBException;
 import net.sharkfw.system.L;
 import net.sharksystem.android.protocols.wifidirect.WifiDirectKPNotifier;
 import net.sharksystem.android.protocols.wifidirect.WifiDirectListener;
@@ -100,9 +103,27 @@ public class SharkServiceController
     public void onReceive(Context context, Intent intent) {
         String action = intent.getAction();
 
-        if(WifiDirectKPNotifier.NEW_INTEREST_ACTION.equals(action)){
-            L.d("Interest received " + action, this);
-            _peers = intent.getParcelableArrayListExtra("WifiDirectPeers");
+        if(WifiDirectKPNotifier.NEW_INTEREST_ACTION.equals(action)) {
+
+            String stringInterest = intent.getStringExtra("interest");
+            ASIPInterest interest = null;
+            try {
+                interest = ASIPSerializer.deserializeASIPInterest(stringInterest);
+            } catch (SharkKBException e) {
+                e.printStackTrace();
+            }
+
+            WifiDirectPeer newPeer = new WifiDirectPeer(interest.getSender(), interest);
+
+            if (this._peers.contains(newPeer)) {
+                WifiDirectPeer peer = this._peers.get(this._peers.indexOf(newPeer));
+                if (peer.getLastUpdated() < newPeer.getLastUpdated()) {
+                    this._peers.remove(peer);
+                    this._peers.add(newPeer);
+                }
+            } else {
+                this._peers.add(newPeer);
+            }
         }
     }
 

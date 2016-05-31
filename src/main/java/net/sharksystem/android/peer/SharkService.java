@@ -12,6 +12,7 @@ import net.sharkfw.knowledgeBase.inmemory.InMemoSharkKB;
 import net.sharkfw.kp.FilterKP;
 import net.sharkfw.peer.KnowledgePort;
 import net.sharkfw.system.L;
+import net.sharksystem.android.protocols.wifidirect.RadarKP;
 import net.sharksystem.android.protocols.wifidirect.WifiDirectKPNotifier;
 import net.sharksystem.android.protocols.wifidirect.WifiDirectPeer;
 
@@ -56,7 +57,7 @@ public class SharkService extends Service {
         L.d("Starting", this);
         if(!_isEngineStarted){
             if(_knowledgePorts.isEmpty())
-                addKP(new FilterKP(_engine, InMemoSharkKB.createInMemoASIPInterest(),_kpNotifier ));
+                addKP(new RadarKP(_engine, InMemoSharkKB.createInMemoASIPInterest(), _kpNotifier));
             try {
                 _engine.startWifiDirect();
             } catch (IOException e) {
