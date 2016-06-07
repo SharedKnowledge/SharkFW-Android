@@ -7,6 +7,7 @@ import android.content.IntentFilter;
 import android.net.NetworkInfo;
 import android.net.wifi.WpsInfo;
 import android.net.wifi.p2p.WifiP2pConfig;
+import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceInfo;
 import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceRequest;
@@ -19,6 +20,7 @@ import net.sharkfw.asip.engine.ASIPSerializer;
 import net.sharkfw.knowledgeBase.PeerSemanticTag;
 import net.sharkfw.knowledgeBase.SharkKBException;
 import net.sharkfw.protocols.StreamStub;
+import net.sharkfw.system.L;
 
 import java.security.PrivateKey;
 import java.util.HashMap;
@@ -43,6 +45,13 @@ public class WifiDirectManager
     private boolean _isStarted = false;
     private boolean _isReceiverRegistered = false;
 
+    public final static int INITIALIZED = 0;
+    public final static int DISCOVERING = 1;
+    public final static int CONNECTING = 2;
+    public final static int CONNECTED = 3;
+
+    public int _status;
+
     private int _INTERVALL = 10000;
 
     public WifiDirectManager(WifiP2pManager manager, Context context, WifiDirectStreamStub stub) {
@@ -55,6 +64,8 @@ public class WifiDirectManager
 
         _handler = new Handler();
         _map = new HashMap<>();
+
+        _status = INITIALIZED;
     }
 
     public WifiDirectManager(WifiP2pManager manager, Context context, WifiDirectStreamStub stub, ASIPSpace space) {
@@ -80,7 +91,6 @@ public class WifiDirectManager
                 intentFilter.addAction(WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION);
                 _context.registerReceiver(this, intentFilter);
                 _isReceiverRegistered = true;
-
             }
 
             initAdvertising();
@@ -92,6 +102,8 @@ public class WifiDirectManager
             _isStarted = true;
 
             _handler.post(this);
+
+            _status = DISCOVERING;
 
         }
         return _isStarted;
@@ -108,6 +120,7 @@ public class WifiDirectManager
                 _context.unregisterReceiver(this);
                 _isReceiverRegistered = false;
             }
+            disconnect();
         }
         return _isStarted;
     }
@@ -149,15 +162,23 @@ public class WifiDirectManager
         _manager.addLocalService(_channel, _serviceInfo, new WifiActionListener("Add LocalService"));
     }
 
-    public void connect(PeerSemanticTag peer){
-
-    }
-
     public void connect(WifiDirectPeer peer){
         final WifiP2pConfig config = new WifiP2pConfig();
         config.deviceAddress = peer.deviceAddress;
         config.wps.setup = WpsInfo.PBC;
         _manager.connect(_channel, config, new WifiActionListener("Connect"));
+        _status = CONNECTING;
+    }
+
+    public void disconnect(){
+        if(_status==CONNECTED){
+            _manager.requestGroupInfo(_channel, new WifiP2pManager.GroupInfoListener() {
+                @Override
+                public void onGroupInfoAvailable(WifiP2pGroup group) {
+                    _manager.removeGroup(_channel, new WifiActionListener("Remove Group"));
+                }
+            });
+        }
     }
 
     public void offerInterest(ASIPSpace space) {
@@ -180,17 +201,30 @@ public class WifiDirectManager
 //                setIsWifiP2pEnabled(false);
             }
         } else if (WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION.equals(action)) {
-//            if (_state != WifiDirectStreamStubState.READY)
 //            _manager.requestPeers(_channel, _stub);
+        } else if (WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION.equals(action)) {
+
         } else if (WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION.equals(action)) {
             NetworkInfo networkInfo = (NetworkInfo) intent.getParcelableExtra(WifiP2pManager.EXTRA_NETWORK_INFO);
+            L.d("Network: " + networkInfo, this);
             if(networkInfo.isConnected()){
+                _status = CONNECTED;
                 _manager.requestConnectionInfo(_channel, _stub);
+            } else {
+                if(_status==CONNECTED){
+                    _stub.onDisconnected();
+                    start();
+                }
+                _status = DISCOVERING;
             }
         }
     }
 
     public void requestGroupInfo(WifiP2pManager.GroupInfoListener listener) {
         _manager.requestGroupInfo(_channel, listener);
+    }
+
+    public int getStatus() {
+        return _status;
     }
 }

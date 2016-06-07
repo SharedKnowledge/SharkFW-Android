@@ -71,6 +71,7 @@ public class SharkServiceController
             _context.unbindService(this);
             _isBound = false;
         }
+        stopService();
     }
 
     @Override
@@ -141,17 +142,7 @@ public class SharkServiceController
         return _peers;
     }
 
-    public void connect(WifiDirectPeer peer){
-        _sharkService.connect(peer);
+    public void sendBroadcast(String text){
+        _sharkService.sendBroadcast(text);
     }
-
-//    public void disconnect(){
-//        _sharkService.disconnect();
-//    }
-
-//    public void sendMessage(String text){
-//        _sharkService.sendMessage(text);
-//    }
-
-    public void sendBroadcast(String text){ }
 }

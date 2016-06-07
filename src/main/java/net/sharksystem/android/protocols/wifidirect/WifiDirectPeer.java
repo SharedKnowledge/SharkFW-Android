@@ -14,31 +14,26 @@ import java.util.Map;
 /**
  * Created by micha on 28.01.16.
  */
-public class WifiDirectPeer extends WifiP2pDevice {
+public class WifiDirectPeer extends WifiP2pDevice implements Comparable<WifiDirectPeer> {
 
-    private ASIPInterest _interest;
+    public final String WIFI_PROTOCOL = "wifi://";
+
+    private ASIPInterest _interest = null;
+
     private PeerSemanticTag _tag;
 
-    private Map<String, String> _txtRecordsMap;
     private long _lastUpdated;
-
-    public String WIFI_PROTOCOL = "wifi://";
-    private String WIFI_SI = "www.sharksystems.net/wifi";
-
-    public int wpsConfigMethodsSupported;
-    public int deviceCapability;
-    public int groupCapability;
-    public int status;
 
     public WifiDirectPeer(WifiP2pDevice device, Map<String, String> txtRecordsMap) {
         super(device);
-        _txtRecordsMap = txtRecordsMap;
         _lastUpdated = System.currentTimeMillis();
 
         try {
             _tag = InMemoSharkKB.createInMemoPeerSemanticTag(deviceName, "www.sharksystem.de/" + deviceName, WIFI_PROTOCOL + deviceAddress);
-            _interest = ASIPSerializer.deserializeASIPInterest(_txtRecordsMap.get("interest"));
-            _interest.setSender(_tag);
+            if(txtRecordsMap != null){
+                _interest = ASIPSerializer.deserializeASIPInterest(txtRecordsMap.get("interest"));
+                _interest.setSender(_tag);
+            }
         } catch (SharkKBException e) {
             e.printStackTrace();
         }
@@ -60,10 +55,6 @@ public class WifiDirectPeer extends WifiP2pDevice {
         }
     }
 
-    public Map<String, String> getTxtRecords() {
-        return _txtRecordsMap;
-    }
-
     public ASIPInterest getInterest(){
         return _interest;
     }
@@ -76,44 +67,9 @@ public class WifiDirectPeer extends WifiP2pDevice {
         return _lastUpdated;
     }
 
-//    private void tagToDevice(PeerSemanticTag tag){
-//
-//    }
-
-//    public PeerSemanticTag getDeviceAsTag(){
-//
-//        String name = deviceName;
-//
-//        JSONObject object = new JSONObject();
-//        try {
-//            object.put("deviceName", deviceName);
-//            object.put("deviceAddress", deviceAddress);
-//            object.put("primaryDeviceType", primaryDeviceType);
-//            object.put("secondaryDeviceType", secondaryDeviceType);
-//            object.put("wpsConfigMethodsSupported", wpsConfigMethodsSupported);
-//            object.put("deviceCapability", deviceCapability);
-//            object.put("groupCapability", groupCapability);
-//            object.put("status", status);
-////            object.put("wfdInfo", secondaryDeviceType);
-//            Class<?> c = this.getClass();
-//            Field wfdInfo = c.getDeclaredField("wfdInfo");
-//            Class<?> info = "WifiP2pWfdInfo".getClass();
-//            wfdInfo.get(this).toString();
-//            info.asSubclass(info).getConstructor(info).newInstance(wfdInfo);
-//        } catch (JSONException e) {
-//            e.printStackTrace();
-//        } catch (NoSuchFieldException e) {
-//            e.printStackTrace();
-//        } catch (NoSuchMethodException e) {
-//            e.printStackTrace();
-//        } catch (IllegalAccessException e) {
-//            e.printStackTrace();
-//        } catch (InstantiationException e) {
-//            e.printStackTrace();
-//        } catch (InvocationTargetException e) {
-//            e.printStackTrace();
-//        }
-//
-//        return InMemoSharkKB.createInMemoPeerSemanticTag(name, WIFI_SI, WIFI_PROTOCOL + object.toString());
-//    }
+    @Override
+    public int compareTo(WifiDirectPeer another) {
+        return (_lastUpdated < another.getLastUpdated() ? -1 :
+                (_lastUpdated == another.getLastUpdated() ? 0 : 1));
+    }
 }

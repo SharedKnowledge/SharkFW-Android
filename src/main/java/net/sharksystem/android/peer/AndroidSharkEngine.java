@@ -3,6 +3,7 @@ package net.sharksystem.android.peer;
 import android.app.Activity;
 import android.content.Context;
 
+import net.sharkfw.asip.ASIPKnowledge;
 import net.sharkfw.asip.ASIPSpace;
 import net.sharkfw.asip.SharkStub;
 import net.sharkfw.kep.SharkProtocolNotSupportedException;
@@ -61,18 +62,6 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine {
     public void stopWifiDirect() throws SharkProtocolNotSupportedException {
         currentStub.stop();
     }
-
-    public Stub getWifiStub(){
-        return currentStub;
-    }
-
-    public void connect(WifiDirectPeer peer){
-        ((WifiDirectStreamStub) currentStub).connect(peer);
-    }
-
-//    public void disconnect(){
-//        ((WifiDirectStreamStub) currentStub).disconnect();
-//    }
 
     @Override
     protected Stub createNfcStreamStub(SharkStub stub) throws SharkProtocolNotSupportedException {
@@ -134,12 +123,12 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine {
 
     }
 
-//    public void sendWifiMessage(String text) {
-//        ((WifiDirectStreamStub) currentStub).sendMessage(text);
-//    }
-
 
     public void sendBroadcast(String text) {
         ((WifiDirectStreamStub) currentStub).sendBroadcast(text);
+    }
+
+    public void sendBroadcast(ASIPKnowledge knowledge){
+        ((WifiDirectStreamStub) currentStub).sendBroadcast(knowledge);
     }
 }
