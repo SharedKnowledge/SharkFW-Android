@@ -166,7 +166,15 @@ public class WifiDirectManager
         final WifiP2pConfig config = new WifiP2pConfig();
         config.deviceAddress = peer.deviceAddress;
         config.wps.setup = WpsInfo.PBC;
-        _manager.connect(_channel, config, new WifiActionListener("Connect"));
+        _manager.connect(_channel, config, new WifiP2pManager.ActionListener() {
+            @Override
+            public void onSuccess() {
+            }
+
+            @Override
+            public void onFailure(int reason) {
+            }
+        });
         _status = CONNECTING;
     }
 

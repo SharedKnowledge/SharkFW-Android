@@ -16,6 +16,7 @@ import net.sharkfw.asip.ASIPKnowledge;
 import net.sharkfw.asip.ASIPSpace;
 import net.sharkfw.asip.engine.ASIPInMessage;
 import net.sharkfw.asip.engine.ASIPOutMessage;
+import net.sharkfw.asip.engine.ASIPSerializer;
 import net.sharkfw.knowledgeBase.Knowledge;
 import net.sharkfw.knowledgeBase.PeerSTSet;
 import net.sharkfw.knowledgeBase.PeerSemanticTag;
@@ -31,6 +32,8 @@ import net.sharkfw.protocols.tcp.TCPConnection;
 import net.sharkfw.system.L;
 import net.sharkfw.system.SharkNotSupportedException;
 import net.sharksystem.android.peer.AndroidSharkEngine;
+
+import org.json.JSONException;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -53,23 +56,26 @@ public class WifiDirectStreamStub
         implements StreamStub,
         WifiP2pManager.ConnectionInfoListener,
         WifiP2pManager.DnsSdTxtRecordListener,
-        WifiP2pManager.GroupInfoListener,
         ConnectionStatusListener{
 
     private final long PEER_DURABILITY = 1000 * 60 * 1; // 1 Minute
     private final int BROADCASTAMOUNT = 5;
+    private PeerSemanticTag _owner;
+
 
     private final WifiDirectStreamStub that = this;
 
     private final AndroidSharkEngine _engine;
     private final WifiDirectManager _wifiDirectManager;
+    private final WifiDirectBroadcastManager _wifiDirectBroadcastManager;
 
     private Context _context;
     private WifiP2pManager _manager;
     private boolean _isStarted = false;
-    private ArrayList<WifiDirectPeer> _peers = new ArrayList<>();
     private HashMap<ASIPKnowledge, ArrayList<WifiDirectPeer>> _knowledgeMap;
-    private Handler _handler;
+    // Lists
+    private ArrayList<WifiDirectPeer> _peers = new ArrayList<>();
+    private ArrayList<WifiP2pDevice> _knownDevices = new ArrayList<>();
 
     // ASIP
     private ASIPKnowledge _currentKnowledge;
@@ -83,7 +89,6 @@ public class WifiDirectStreamStub
         _engine.addConnectionStatusListener(this);
 
         _manager = (WifiP2pManager) _context.getSystemService(Context.WIFI_P2P_SERVICE);
-        _handler = new Handler();
 
         STSet topics = InMemoSharkKB.createInMemoSTSet();
         ASIPSpace space = null;
@@ -97,8 +102,11 @@ public class WifiDirectStreamStub
 
         _wifiDirectManager = new WifiDirectManager(_manager, _context, this, space);
 
-        _knowledgeMap = new HashMap<>();
+        _wifiDirectBroadcastManager = WifiDirectBroadcastManager.getInstance(_context);
+        _wifiDirectBroadcastManager.setWifiDirectManager(_wifiDirectManager);
+        _wifiDirectBroadcastManager.setEngine(_engine);
 
+        _knowledgeMap = new HashMap<>();
     }
 
     @Override
@@ -111,11 +119,56 @@ public class WifiDirectStreamStub
         if (!_isStarted) _isStarted = _wifiDirectManager.start();
     }
 
+    private void updateDevice(WifiP2pDevice device){
+        if(_knownDevices.contains(device)){
+            _knownDevices.remove(device);
+            _knownDevices.add(device);
+        } else {
+            _knownDevices.add(device);
+        }
+    }
+
+    private void addPeer(WifiDirectPeer peer){
+        if(_peers.contains(peer)){
+            int indexOf = _peers.indexOf(peer);
+            WifiDirectPeer temp = _peers.get(indexOf);
+            if (temp.getLastUpdated() <= peer.getLastUpdated()) {
+                _peers.remove(temp);
+                _peers.add(peer);
+            }
+        } else {
+            _peers.add(peer);
+        }
+    }
+
+    public ArrayList<WifiDirectPeer> getAvailablePeers(){
+        ArrayList<WifiDirectPeer> availablePeers = new ArrayList<>();
+
+        Iterator<WifiDirectPeer> iterator = _peers.iterator();
+        while (iterator.hasNext()){
+            WifiDirectPeer current = iterator.next();
+            if(current.status == WifiP2pDevice.AVAILABLE){
+                availablePeers.add(current);
+            }
+        }
+
+        return availablePeers;
+    }
+
     @Override
     public void onDnsSdTxtRecordAvailable(String fullDomainName, Map<String, String> txtRecordMap, WifiP2pDevice srcDevice) {
 
+        // Add device to knownDevices list.
+        updateDevice(srcDevice);
+        // Add peer tp list
         WifiDirectPeer peer = new WifiDirectPeer(srcDevice, txtRecordMap);
         addPeer(peer);
+        // Update Lists in WifiDirectBroadcastManager
+        _wifiDirectBroadcastManager.setDevices(_knownDevices);
+        _wifiDirectBroadcastManager.setPeers(_peers);
+        _wifiDirectBroadcastManager.notifyUpdate();
+
+        // Send interest to KP
         ASIPInMessage msg = new ASIPInMessage(_engine, peer.getInterest(), _engine.getAsipStub());
         msg.setTtl(10);
         msg.setSender(peer.getTag());
@@ -160,75 +213,73 @@ public class WifiDirectStreamStub
 
     }
 
-    private void initConnection(){
-        WifiDirectPeer peer = pickPeer(_currentKnowledge);
-        if(peer != null && _wifiDirectManager.getStatus() == WifiDirectManager.DISCOVERING){
-            _wifiDirectManager.connect(peer);
-        }
-    }
-
-    private void initSending(){
-
-    }
-
-    private boolean knowledgeReachedLimit(ASIPKnowledge knowledge){
-        ArrayList<WifiDirectPeer> peers = _knowledgeMap.get(knowledge);
-        return peers.size() >= BROADCASTAMOUNT ? true : false;
-    }
-
-    private ASIPKnowledge pickAnotherKnowledge(WifiDirectPeer peer){
-        if(_knowledgeMap.size() >= 2){
-            Set<Map.Entry<ASIPKnowledge, ArrayList<WifiDirectPeer>>> entries = _knowledgeMap.entrySet();
-            Iterator<Map.Entry<ASIPKnowledge, ArrayList<WifiDirectPeer>>> entryIterator = entries.iterator();
-            while (entryIterator.hasNext()) {
-                // Get Knowledge and ArrayList
-                Map.Entry<ASIPKnowledge, ArrayList<WifiDirectPeer>> entry = entryIterator.next();
-                ASIPKnowledge asipKnowledge = entry.getKey();
-                ArrayList<WifiDirectPeer> peerArrayList = entry.getValue();
-
-                if (peerArrayList.size() < BROADCASTAMOUNT && peerArrayList.contains(peer)) {
-                    return asipKnowledge;
-                }
-            }
-        } else {
-            throw new ArrayIndexOutOfBoundsException();
-        }
-        return null;
-    }
-
-    private void addPeerToCurrentKnowledge(WifiDirectPeer peer){
-        ArrayList<WifiDirectPeer> list = _knowledgeMap.get(_currentKnowledge);
-        list.add(peer);
-        _knowledgeMap.put(_currentKnowledge, list);
-    }
-
-    private WifiDirectPeer pickPeer(ASIPKnowledge knowledge){
-        if(_knowledgeMap.containsKey(knowledge)){
-            ArrayList<WifiDirectPeer> peers = _knowledgeMap.get(knowledge);
-            Collections.sort(_peers);
-            Iterator<WifiDirectPeer> knownPeers = _peers.iterator();
-
-            while (knownPeers.hasNext()){
-                WifiDirectPeer peer = knownPeers.next();
-                if(!peers.contains(peer)){
-                    _currentPeer = peer;
-                    return peer;
-                }
-            }
-        } else {
-            L.d("Knowledge not known.");
-        }
-        return null;
-    }
-
-
+//    private void initConnection(){
+//        WifiDirectPeer peer = pickPeer(_currentKnowledge);
+//        if(peer != null && _wifiDirectManager.getStatus() == WifiDirectManager.DISCOVERING){
+//            _wifiDirectManager.connect(peer);
+//        }
+//    }
+//
+//    private boolean knowledgeReachedLimit(ASIPKnowledge knowledge){
+//        ArrayList<WifiDirectPeer> peers = _knowledgeMap.get(knowledge);
+//        return peers.size() >= BROADCASTAMOUNT ? true : false;
+//    }
+//
+//    private ASIPKnowledge pickAnotherKnowledge(WifiDirectPeer peer){
+//        if(_knowledgeMap.size() >= 2){
+//            Set<Map.Entry<ASIPKnowledge, ArrayList<WifiDirectPeer>>> entries = _knowledgeMap.entrySet();
+//            Iterator<Map.Entry<ASIPKnowledge, ArrayList<WifiDirectPeer>>> entryIterator = entries.iterator();
+//            while (entryIterator.hasNext()) {
+//                // Get Knowledge and ArrayList
+//                Map.Entry<ASIPKnowledge, ArrayList<WifiDirectPeer>> entry = entryIterator.next();
+//                ASIPKnowledge asipKnowledge = entry.getKey();
+//                ArrayList<WifiDirectPeer> peerArrayList = entry.getValue();
+//
+//                if (peerArrayList.size() < BROADCASTAMOUNT && peerArrayList.contains(peer)) {
+//                    return asipKnowledge;
+//                }
+//            }
+//        } else {
+//            throw new ArrayIndexOutOfBoundsException();
+//        }
+//        return null;
+//    }
+//
+//    private void addPeerToCurrentKnowledge(WifiDirectPeer peer){
+//        ArrayList<WifiDirectPeer> list = _knowledgeMap.get(_currentKnowledge);
+//        list.add(peer);
+//        _knowledgeMap.put(_currentKnowledge, list);
+//    }
+//
+//    private WifiDirectPeer pickPeer(ASIPKnowledge knowledge){
+//        if(_knowledgeMap.containsKey(knowledge)){
+//            ArrayList<WifiDirectPeer> peers = _knowledgeMap.get(knowledge);
+//            Collections.sort(_peers);
+//            Iterator<WifiDirectPeer> knownPeers = _peers.iterator();
+//
+//            while (knownPeers.hasNext()){
+//                WifiDirectPeer peer = knownPeers.next();
+//                if(!peers.contains(peer)){
+//                    _currentPeer = peer;
+//                    return peer;
+//                }
+//            }
+//        } else {
+//            L.d("Knowledge not known.");
+//        }
+//        return null;
+//    }
 
     public void sendBroadcast(ASIPKnowledge knowledge){
-        _knowledgeMap.put(knowledge, new ArrayList<WifiDirectPeer>());
-        _currentKnowledge = knowledge;
-        if(!_peers.isEmpty()){
-            initConnection();
-        }
+
+        _wifiDirectBroadcastManager.addKnowledge(knowledge);
+
+//        // TODO to be removed
+//        _knowledgeMap.put(knowledge, new ArrayList<WifiDirectPeer>());
+//        _currentKnowledge = knowledge;
+//        if(!_peers.isEmpty()){
+//            initConnection();
+//        }
 //        _handler.post(this);
     }
 
@@ -238,8 +289,6 @@ public class WifiDirectStreamStub
 
         ASIPKnowledge knowledge = InMemoSharkKB.createInMemoKnowledge();
         try {
-            PeerSTSet approvers = InMemoSharkKB.createInMemoPeerSTSet();
-            approvers.merge(_engine.getOwner());
             STSet types = InMemoSharkKB.createInMemoSTSet();
             types.createSemanticTag("BROADCAST", "www.sharksystem.de/broadcast");
             ASIPSpace space = InMemoSharkKB.createInMemoASIPInterest(null, types, (PeerSemanticTag) null, null, null, null, null, ASIPSpace.DIRECTION_INOUT);
@@ -252,16 +301,17 @@ public class WifiDirectStreamStub
 
     public void onDisconnected(){
         L.d("Disconnect successful", this);
+        _wifiDirectBroadcastManager.onDisconnected();
     }
 
-    private ASIPOutMessage createASIPOutMessage(WifiDirectPeer peer, String address){
-        PeerSemanticTag tag = peer.getTag();
-//        PeerSemanticTag tcpTag = InMemoSharkKB.createInMemoPeerSemanticTag(tag.getName(), tag.getSI(), "tcp://" + address + ":7071");
-        PeerSemanticTag tcpTag = InMemoSharkKB.createInMemoPeerSemanticTag("Receiver", "www.receiver.de", "tcp://"+address+":7071");
-        L.d(tcpTag.getAddresses().toString(), this);
-        L.d(tcpTag.getAddresses()[0].toString(), this);
-        return _engine.createASIPOutMessage(tcpTag.getAddresses(), tcpTag);
-    }
+//    private ASIPOutMessage createASIPOutMessage(WifiDirectPeer peer, String address){
+//        PeerSemanticTag tag = peer.getTag();
+////        PeerSemanticTag tcpTag = InMemoSharkKB.createInMemoPeerSemanticTag(tag.getName(), tag.getSI(), "tcp://" + address + ":7071");
+//        PeerSemanticTag tcpTag = InMemoSharkKB.createInMemoPeerSemanticTag("Receiver", "www.receiver.de", "tcp://"+address+":7071");
+//        L.d(tcpTag.getAddresses().toString(), this);
+//        L.d(tcpTag.getAddresses()[0].toString(), this);
+//        return _engine.createASIPOutMessage(tcpTag.getAddresses(), tcpTag);
+//    }
 
     @Override
     public void onConnectionInfoAvailable(final WifiP2pInfo info) {
@@ -274,123 +324,92 @@ public class WifiDirectStreamStub
             @Override
             public void onGroupInfoAvailable(WifiP2pGroup group) {
 
-                if(info.groupFormed && info.isGroupOwner){
-                    // Owner
-                    Toast.makeText(_context, "I'm the owner", Toast.LENGTH_SHORT).show();
-                    L.d("I'm the owner", this);
-
-                    // startTCP
-                    try {
-                        _engine.startTCP(7071, _currentKnowledge);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-
-                    Toast.makeText(_context, "Waiting for connections...", Toast.LENGTH_LONG).show();
-
-                    // Now wait for incoming Connection
-                    // ...
-
-                } else if(info.groupFormed){
-                    // Client
-                    L.d("I'm the client", this);
-                    Toast.makeText(_context, "I'm the client", Toast.LENGTH_LONG).show();
-
-
-                    // startTCP
+                if(info.groupFormed){
+                    _wifiDirectBroadcastManager.onConnectionEstablished(info, group/*info.isGroupOwner, info.groupOwnerAddress.getHostAddress()*/);
+                }
+//
+//                if(info.groupFormed && info.isGroupOwner){
+//                    // Owner
+//                    Toast.makeText(_context, "I'm the owner", Toast.LENGTH_SHORT).show();
+//                    L.d("I'm the owner", this);
+//
+//                    // startTCP
 //                    try {
 //                        _engine.startTCP(7071, _currentKnowledge);
 //                    } catch (IOException e) {
 //                        e.printStackTrace();
 //                    }
-
-//                    L.d("Now let's chill 5 seconds", this);
-//                    try {
-//                        Thread.sleep(5000);
-//                    } catch (InterruptedException e) {
-//                        e.printStackTrace();
-//                    }
-
-                    // hey I'm the client..
-                    // go get me the IP Address of the Host
-                    final String groupOwnerAddress = info.groupOwnerAddress.getHostAddress();
-                    L.d("groupOwnerAddress:"+groupOwnerAddress, this);
-                    // perfect, now go get me the WifiP2PDevice
-
-                    final WifiDirectPeer owner = new WifiDirectPeer(group.getOwner(), null);
-                    // Now check if I have knowledge I can send
-                    ASIPKnowledge knowledge = null;
-                    if(!_knowledgeMap.isEmpty()){
-                        L.d("I have knowledge to send", this);
-                        // hey, I have knowledge
-                        // new go get me the knowledgeMap
-                        Set<Map.Entry<ASIPKnowledge, ArrayList<WifiDirectPeer>>> entries = _knowledgeMap.entrySet();
-                        Iterator<Map.Entry<ASIPKnowledge, ArrayList<WifiDirectPeer>>> entryIterator = entries.iterator();
-                        // perfect. now iterate through each entry and pick a knowledge
-                        while (entryIterator.hasNext()){
-                            Map.Entry<ASIPKnowledge, ArrayList<WifiDirectPeer>> next = entryIterator.next();
-                            // get the deviceList to check, if I've already sent the knowledge to the device
-                            ArrayList<WifiDirectPeer> deviceList = next.getValue();
-                            // check if owner is NOT in the list
-                            if(!deviceList.contains(owner) && deviceList.size() < BROADCASTAMOUNT){
-                                // Hey, this is a knowledge I haven't sent to the owner.
-                                knowledge = next.getKey();
-                                break;
-                            }
-                        }
-
-                        L.d("Knowledges had been searched", this);
-
-//                        if(knowledge!=null){
-//                            L.d("K != null", this);
-//                            // Create a message with the groupOwner as receiver.
-
-                        final ASIPKnowledge finalKnowledge = knowledge;
-
-                        new Thread(new Runnable() {
-                            @Override
-                            public void run() {
-                                ASIPOutMessage  msg = createASIPOutMessage(owner, groupOwnerAddress);
-                                // open a thread and send the knowledge
-                                msg.insert(finalKnowledge);
-                                L.d("K sent", this);
-                                // Now wait until the stream ends
-                                //....
-                            }
-                        }).start();
-//                         } else {
-//                            L.d("no k1", this);
-//                            // no knowledge - create just a simple TCPConnection
 //
-//                            new Thread(new Runnable() {
-//                                @Override
-//                                public void run() {
-//                                    try {
-//                                        TCPConnection connection = new TCPConnection(groupOwnerAddress, 7071);
-//                                        connection.addConnectionListener(that);
-//                                    } catch (IOException e) {
-//                                        e.printStackTrace();
-//                                    }
-//                                }
-//                            }).start();
+//                    Toast.makeText(_context, "Waiting for connections...", Toast.LENGTH_LONG).show();
+//
+//                    // Now wait for incoming Connection
+//                    // ...
+//
+//                } else if(info.groupFormed){
+//                    // Client
+//                    L.d("I'm the client", this);
+//                    Toast.makeText(_context, "I'm the client", Toast.LENGTH_LONG).show();
+//
+//                    // hey I'm the client..
+//                    // go get me the IP Address of the Host
+//                    final String groupOwnerAddress = info.groupOwnerAddress.getHostAddress();
+//                    L.d("groupOwnerAddress:"+groupOwnerAddress, this);
+//                    // perfect, now go get me the WifiP2PDevice
+//
+//                    final WifiDirectPeer owner = new WifiDirectPeer(group.getOwner(), null);
+//                    // Now check if I have knowledge I can send
+//                    ASIPKnowledge knowledge = null;
+//                    if(!_knowledgeMap.isEmpty()){
+//                        L.d("I have knowledge to send", this);
+//                        // hey, I have knowledge
+//                        // new go get me the knowledgeMap
+//                        Set<Map.Entry<ASIPKnowledge, ArrayList<WifiDirectPeer>>> entries = _knowledgeMap.entrySet();
+//                        Iterator<Map.Entry<ASIPKnowledge, ArrayList<WifiDirectPeer>>> entryIterator = entries.iterator();
+//                        // perfect. now iterate through each entry and pick a knowledge
+//                        while (entryIterator.hasNext()){
+//                            Map.Entry<ASIPKnowledge, ArrayList<WifiDirectPeer>> next = entryIterator.next();
+//                            // get the deviceList to check, if I've already sent the knowledge to the device
+//                            ArrayList<WifiDirectPeer> deviceList = next.getValue();
+//                            // check if owner is NOT in the list
+//                            if(!deviceList.contains(owner) && deviceList.size() < BROADCASTAMOUNT){
+//                                // Hey, this is a knowledge I haven't sent to the owner.
+//                                knowledge = next.getKey();
+//                                break;
+//                            }
 //                        }
-                    } else {
-                        L.d("no k2", this);
-                        // no knowledge - create just a simple TCPConnection
-
-                        new Thread(new Runnable() {
-                            @Override
-                            public void run() {
-                                ASIPOutMessage  msg = createASIPOutMessage(owner, groupOwnerAddress);
-                                // open a thread and send the knowledge
-                                msg.insert(null);
-                                L.d("K sent", this);
-                                // Now wait until the stream ends
-                                //....
-                            }
-                        }).start();
-                    }
-                }
+//
+//                        L.d("Knowledges had been searched", this);
+//
+//                        final ASIPKnowledge finalKnowledge = knowledge;
+//
+//                        new Thread(new Runnable() {
+//                            @Override
+//                            public void run() {
+//                                ASIPOutMessage  msg = createASIPOutMessage(owner, groupOwnerAddress);
+//                                // open a thread and send the knowledge
+//                                msg.insert(finalKnowledge);
+//                                L.d("K sent", this);
+//                                // Now wait until the stream ends
+//                                //....
+//                            }
+//                        }).start();
+//                    } else {
+//                        L.d("no k2", this);
+//                        // no knowledge - create just a simple TCPConnection
+//
+//                        new Thread(new Runnable() {
+//                            @Override
+//                            public void run() {
+//                                ASIPOutMessage  msg = createASIPOutMessage(owner, groupOwnerAddress);
+//                                // open a thread and send the knowledge
+//                                msg.insert(null);
+//                                L.d("K sent", this);
+//                                // Now wait until the stream ends
+//                                //....
+//                            }
+//                        }).start();
+//                    }
+//                }
 
 
 
@@ -398,39 +417,7 @@ public class WifiDirectStreamStub
             }
         });
 
-//        String groupOwnerAddress = info.groupOwnerAddress.getHostAddress();
-//        final ASIPOutMessage msg = createASIPOutMessage(groupOwnerAddress);
-
-
     }
-
-    @Override
-    public void onGroupInfoAvailable(WifiP2pGroup group) {
-
-    }
-
-    private void addPeer(WifiDirectPeer peer){
-        if(!_peers.contains(peer)){
-            _peers.add(peer);
-        } else {
-            Iterator<WifiDirectPeer> peerIterator = _peers.iterator();
-            while (peerIterator.hasNext()){
-                WifiDirectPeer temp = peerIterator.next();
-                if (temp.equals(peer)){
-                    try {
-                        if (temp.getLastUpdated() < peer.getLastUpdated()
-                                || !SharkAlgebra.identical(temp.getInterest(), peer.getInterest())){
-                            _peers.remove(temp);
-                            _peers.add(peer);
-                        }
-                    } catch (SharkKBException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        }
-    }
-
 
     /**
      * Triggered when TCPConnection is closed.
@@ -439,6 +426,6 @@ public class WifiDirectStreamStub
     public void connectionClosed() {
         L.d("TCPConnection got closed", this);
         _wifiDirectManager.disconnect();
-        L.d("Disconnect triggered.",this);
+//        L.d("Disconnect triggered.",this);
     }
 }

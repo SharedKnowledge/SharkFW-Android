@@ -51,6 +51,12 @@ public class WifiDirectKPNotifier implements KPNotifier {
     @Override
     public void notifyKnowledgeReceived(ASIPKnowledge asipKnowledge, ASIPConnection asipConnection) {
 
+        L.d("We got a knowledge", this);
+//        if(asipKnowledge==null){
+//            L.d("But knowledge equals null");
+//            return;
+//        }
+
         String senderName = "";
         try {
 //            senderName = asipConnection.getSender().getName();
@@ -62,6 +68,7 @@ public class WifiDirectKPNotifier implements KPNotifier {
             if(messages.hasNext()){
                 message = messages.next().getContentAsString();
             }
+            L.d("Message:"+message, this);
             if(!message.isEmpty()){
                 Intent intent = new Intent(NEW_BROADCAST_ACTION);
                 intent.putExtra("broadcast_message", message);

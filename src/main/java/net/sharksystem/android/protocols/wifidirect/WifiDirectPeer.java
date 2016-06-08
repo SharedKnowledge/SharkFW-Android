@@ -16,10 +16,9 @@ import java.util.Map;
  */
 public class WifiDirectPeer extends WifiP2pDevice implements Comparable<WifiDirectPeer> {
 
-    public final String WIFI_PROTOCOL = "wifi://";
+    public static final String WIFI_PROTOCOL = "wifi://";
 
     private ASIPInterest _interest = null;
-
     private PeerSemanticTag _tag;
 
     private long _lastUpdated;
@@ -72,4 +71,10 @@ public class WifiDirectPeer extends WifiP2pDevice implements Comparable<WifiDire
         return (_lastUpdated < another.getLastUpdated() ? -1 :
                 (_lastUpdated == another.getLastUpdated() ? 0 : 1));
     }
+
+    public void resetUpdated(){
+        _lastUpdated = 0;
+    }
+
+
 }

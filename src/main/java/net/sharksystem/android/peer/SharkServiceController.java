@@ -82,7 +82,6 @@ public class SharkServiceController
         _sharkService = localBinder.getInstance();
 
         // Set engine and kp if wanted
-
         _sharkService.startEngine();
     }
 
