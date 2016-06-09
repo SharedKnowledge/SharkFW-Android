@@ -58,7 +58,7 @@ public class SharkServiceController
 
     public void bindToService(){
         registerReceiver();
-        Toast.makeText(_context, "Binding...", Toast.LENGTH_SHORT).show();
+//        Toast.makeText(_context, "Binding...", Toast.LENGTH_SHORT).show();
         if(!_isBound){
             _isBound = _context.bindService(_intent, this, _context.BIND_AUTO_CREATE);
         }
@@ -67,7 +67,7 @@ public class SharkServiceController
     public void unbindFromService(){
         LocalBroadcastManager.getInstance(_context).unregisterReceiver(this);
         if(_isBound){
-            Toast.makeText(_context, "Unbinding...", Toast.LENGTH_SHORT).show();
+//            Toast.makeText(_context, "Unbinding...", Toast.LENGTH_SHORT).show();
             _context.unbindService(this);
             _isBound = false;
         }
@@ -76,7 +76,7 @@ public class SharkServiceController
 
     @Override
     public void onServiceConnected(ComponentName name, IBinder service) {
-        Toast.makeText(_context, "Service is connected", Toast.LENGTH_SHORT).show();
+//        Toast.makeText(_context, "Service is connected", Toast.LENGTH_SHORT).show();
         _isBound = true;
         SharkService.LocalBinder localBinder = (SharkService.LocalBinder) service;
         _sharkService = localBinder.getInstance();
@@ -87,7 +87,7 @@ public class SharkServiceController
 
     @Override
     public void onServiceDisconnected(ComponentName name) {
-        Toast.makeText(_context, "Service is disconnected", Toast.LENGTH_SHORT).show();
+//        Toast.makeText(_context, "Service is disconnected", Toast.LENGTH_SHORT).show();
         _isBound = false;
         _sharkService = null;
     }
