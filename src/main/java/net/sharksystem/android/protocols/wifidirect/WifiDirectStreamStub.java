@@ -47,6 +47,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Created by micha on 28.01.16.
@@ -74,8 +75,8 @@ public class WifiDirectStreamStub
     private boolean _isStarted = false;
     private HashMap<ASIPKnowledge, ArrayList<WifiDirectPeer>> _knowledgeMap;
     // Lists
-    private ArrayList<WifiDirectPeer> _peers = new ArrayList<>();
-    private ArrayList<WifiP2pDevice> _knownDevices = new ArrayList<>();
+    private CopyOnWriteArrayList<WifiDirectPeer> _peers = new CopyOnWriteArrayList<>();
+    private CopyOnWriteArrayList<WifiP2pDevice> _knownDevices = new CopyOnWriteArrayList<>();
 
     // ASIP
     private ASIPKnowledge _currentKnowledge;
@@ -85,8 +86,6 @@ public class WifiDirectStreamStub
     public WifiDirectStreamStub(Context context, AndroidSharkEngine engine) {
         _context = context;
         _engine = engine;
-
-        _engine.addConnectionStatusListener(this);
 
         _manager = (WifiP2pManager) _context.getSystemService(Context.WIFI_P2P_SERVICE);
 
@@ -105,6 +104,8 @@ public class WifiDirectStreamStub
         _wifiDirectBroadcastManager = WifiDirectBroadcastManager.getInstance(_context);
         _wifiDirectBroadcastManager.setWifiDirectManager(_wifiDirectManager);
         _wifiDirectBroadcastManager.setEngine(_engine);
+
+        _engine.addConnectionStatusListener(_wifiDirectBroadcastManager);
 
         _knowledgeMap = new HashMap<>();
     }
@@ -318,14 +319,14 @@ public class WifiDirectStreamStub
 
         if(info==null) return;
 
-        Toast.makeText(_context, "Connection incoming", Toast.LENGTH_SHORT).show();
+//        Toast.makeText(_context, "Connection incoming", Toast.LENGTH_SHORT).show();
 
         _wifiDirectManager.requestGroupInfo(new WifiP2pManager.GroupInfoListener() {
             @Override
             public void onGroupInfoAvailable(WifiP2pGroup group) {
 
                 if(info.groupFormed){
-                    _wifiDirectBroadcastManager.onConnectionEstablished(info, group/*info.isGroupOwner, info.groupOwnerAddress.getHostAddress()*/);
+                    _wifiDirectBroadcastManager.onConnectionEstablished(info, group);
                 }
 //
 //                if(info.groupFormed && info.isGroupOwner){

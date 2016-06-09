@@ -5,6 +5,8 @@ import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pInfo;
 import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 
 import net.sharkfw.asip.ASIPInformation;
 import net.sharkfw.asip.ASIPInformationSpace;
@@ -15,10 +17,9 @@ import net.sharkfw.asip.engine.ASIPSerializer;
 import net.sharkfw.knowledgeBase.PeerSemanticTag;
 import net.sharkfw.knowledgeBase.STSet;
 import net.sharkfw.knowledgeBase.SharkAlgebra;
-import net.sharkfw.knowledgeBase.SharkCS;
-import net.sharkfw.knowledgeBase.SharkCSAlgebra;
 import net.sharkfw.knowledgeBase.SharkKBException;
 import net.sharkfw.knowledgeBase.inmemory.InMemoSharkKB;
+import net.sharkfw.protocols.ConnectionStatusListener;
 import net.sharkfw.system.L;
 import net.sharksystem.android.peer.AndroidSharkEngine;
 
@@ -29,20 +30,129 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Created by j4rvis on 01.06.16.
  */
-public class WifiDirectBroadcastManager implements Runnable{
+public class WifiDirectBroadcastManager implements Runnable, ConnectionStatusListener {
 
     private static WifiDirectBroadcastManager _instance = null;
     private Context _context;
 
+    // Thread Messages
+    public final static int NEWKNOWLEDGEMSG = 0;
+    public final static int NEWPEERMSG = 1;
+    public final static int PREPARECONNECTIONMSG = 2;
+    public final static int ONCONNECTEDMSG = 3;
+    public final static int ONDISCONNECTEDMSG = 4;
+    private boolean _isDisconnected;
+    private boolean _hasNewPeers;
+    private boolean _hasNewKnowledge;
+    private String _groupOwnerAddress;
+    private WifiP2pInfo _connectionInfo;
+    private WifiP2pGroup _connectedGroup;
+
+    // Status
+    private enum WifiState {
+        DISCOVERING,
+        CONNECTING,
+        CONNECTED,
+        TCPCLOSED,
+        DISCONNECTED
+    }
+    private WifiState _wifiState = WifiState.DISCOVERING;
+
+    private enum ThreadState {
+        BLOCKED,
+        RUNNING,
+        SENDING,
+        PAUSED,
+        INITIALIZED
+    }
+    private ThreadState _threadState = ThreadState.INITIALIZED;
+
+    private enum BroadcastState {
+        ISOWNER,
+        ISSENDERANDOWNER,
+        ISCLIENT,
+        ISSENDERANDCLIENT,
+        NOTINITIALIZED
+    }
+    private BroadcastState _broadcastState = BroadcastState.NOTINITIALIZED;
+
+    private class LooperThread extends Thread {
+        public Handler mHandler;
+
+        public void run() {
+            Looper.prepare();
+            mHandler = new Handler() {
+                public void handleMessage(Message msg) {
+                    switch (msg.what){
+                        case WifiDirectBroadcastManager.NEWKNOWLEDGEMSG:
+                            doKnowledge();
+                            break;
+                        case WifiDirectBroadcastManager.NEWPEERMSG:
+                            doPeers();
+                            break;
+                        case WifiDirectBroadcastManager.PREPARECONNECTIONMSG:
+                            doPrepare();
+                            break;
+                        case WifiDirectBroadcastManager.ONCONNECTEDMSG:
+                            L.d("ONCONNECTEDMSG");
+                            break;
+                        case WifiDirectBroadcastManager.ONDISCONNECTEDMSG:
+                            L.d("ONDISCONNECTEDMSG queued");
+                            break;
+                    }
+                }
+            };
+            Looper.loop();
+        }
+    }
+
+    LooperThread mLooperThread;
+
+    // Runnables
+
+    private void doKnowledge(){
+        L.d("NEWKNOWLEDGEMSG queued", this);
+    }
+    private void doPeers(){
+        L.d("NEWPEERSMSG queued", this);
+        try {
+            L.d("Sleep 10 seconds", this);
+            Thread.sleep(10000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        queueThread(WifiDirectBroadcastManager.PREPARECONNECTIONMSG);
+    }
+
+    private void doPrepare(){
+        L.d("PREPARECONNECTIONMSG queued", this);
+        try {
+            L.d("Sleep 15 seconds", this);
+            Thread.sleep(15000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        queueThread(WifiDirectBroadcastManager.ONCONNECTEDMSG);
+    }
+
     // Lists and maps
-    private ArrayList<WifiP2pDevice> _devices = new ArrayList<>();
-    private ArrayList<WifiDirectPeer> _peers = new ArrayList<>();
-    private HashMap<ASIPKnowledge, ArrayList<PeerSemanticTag>> _map = new HashMap<>();
-    private boolean _isTryingToSend = false;
+    private CopyOnWriteArrayList<WifiP2pDevice> _devices = new CopyOnWriteArrayList<>();
+    private CopyOnWriteArrayList<WifiDirectPeer> _peers = new CopyOnWriteArrayList<>();
+    private ConcurrentHashMap<ASIPKnowledge, CopyOnWriteArrayList<PeerSemanticTag>> _mapWithPeers = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<ASIPKnowledge, Integer> _mapWithCounts = new ConcurrentHashMap<>();
+    // Temp Lists and Maps
+    private ArrayList<WifiP2pDevice> _tempDevices = new ArrayList<>();
+    private ArrayList<WifiDirectPeer> _tempPeers = new ArrayList<>();
+    private HashMap<ASIPKnowledge, ArrayList<PeerSemanticTag>> _tempMapWithPeers = new HashMap<>();
+    private HashMap<ASIPKnowledge, Integer> _tempMapWithCounts = new HashMap<>();
+
+    private boolean _isSender = false;
     private WifiDirectManager _manager;
 
     // Thread
@@ -60,6 +170,9 @@ public class WifiDirectBroadcastManager implements Runnable{
     private boolean _isOwner = false;
     private boolean _isConnecting = false;
     private WifiDirectPeer _lastConnectedPeer = null;
+    private boolean _messageSent;
+    private int _connectingLimit = 3;
+    private int _connectingCounter = 0;
 
     public static synchronized WifiDirectBroadcastManager getInstance(Context context){
         if(_instance == null){
@@ -70,6 +183,9 @@ public class WifiDirectBroadcastManager implements Runnable{
 
     public WifiDirectBroadcastManager(Context context) {
         _context = context;
+
+        mLooperThread = new LooperThread();
+        mLooperThread.start();
 
         STSet peerTypes = InMemoSharkKB.createInMemoSTSet();
         STSet broadcastTypes = InMemoSharkKB.createInMemoSTSet();
@@ -83,6 +199,21 @@ public class WifiDirectBroadcastManager implements Runnable{
         }
     }
 
+    // Thread methods
+
+    public void onDestroy(){
+        mLooperThread.mHandler.getLooper().quit();
+    }
+
+    private void queueThread(int msgId){
+        if (mLooperThread.mHandler != null) {
+            Message msg = mLooperThread.mHandler.obtainMessage(msgId);
+            mLooperThread.mHandler.sendMessage(msg);
+        }
+    }
+
+    // Setter and Adder
+
     public void setEngine(AndroidSharkEngine engine){
         _engine = engine;
     }
@@ -91,47 +222,85 @@ public class WifiDirectBroadcastManager implements Runnable{
         _manager = manager;
     }
 
-    public void setDevices(ArrayList<WifiP2pDevice> devices){
+    // Acts also as Listener
+
+    public synchronized void setDevices(CopyOnWriteArrayList<WifiP2pDevice> devices){
         _devices = devices;
     }
 
-    public void addKnowledge(ASIPKnowledge knowledge, PeerSemanticTag sender){
+    public synchronized void addKnowledge(ASIPKnowledge knowledge, PeerSemanticTag sender){
 
-        if(_map.containsKey(knowledge)){
+        if(_mapWithPeers.containsKey(knowledge)){
             return;
         } else {
-            try {
-                knowledge.addInformation(ASIPSerializer.serializeTag(sender).toString(), _peerSpace);
-            } catch (JSONException | SharkKBException e) {
-                e.printStackTrace();
+            if(sender!=null){
+                L.d("Add a received knowledge to the pool", this);
+                try {
+                    knowledge.addInformation(ASIPSerializer.serializeTag(sender).toString(), _peerSpace);
+                } catch (JSONException | SharkKBException e) {
+                    e.printStackTrace();
+                }
             }
-            ArrayList knowledgePeers = getKnowledgePeers(knowledge);
-            _map.put(knowledge, knowledgePeers);
+            CopyOnWriteArrayList knowledgePeers = getKnowledgePeers(knowledge);
+            _mapWithPeers.put(knowledge, knowledgePeers);
+            _mapWithCounts.put(knowledge, 0);
+            L.d("Add a received knowledge to the pool", this);
         }
 
         _lastAddedKnowledge = knowledge;
 
-        if(!_isConnecting) _handler.post(this);
+//        queueThread(WifiDirectBroadcastManager.NEWKNOWLEDGEMSG);
+
+//        if(!_wifiState.equals(WifiState.CONNECTING) ||
+//                !_wifiState.equals(WifiState.CONNECTED) ||
+//                !_threadState.equals(ThreadState.RUNNING)){
+//            _handler.post(this);
+//        }
+        startThread();
     }
 
-    public void addKnowledge(ASIPKnowledge knowledge){
+    public synchronized void addKnowledge(ASIPKnowledge knowledge){
+        addKnowledge(knowledge, null);
+    }
 
-        if(_map.containsKey(knowledge)){
-            L.d("Knowledge already known", this);
-            return;
-        } else {
-            ArrayList knowledgePeers = getKnowledgePeers(knowledge);
-            _map.put(knowledge, knowledgePeers);
-            L.d("Knowledge added to map", this);
+    public synchronized void setPeers(CopyOnWriteArrayList<WifiDirectPeer> peers){
+        _peers = peers;
+//        queueThread(WifiDirectBroadcastManager.NEWPEERMSG);
+    }
+
+    // Update Lists and Maps with temp. Lists and Maps
+
+    private void updateLists(){
+
+    }
+
+    private boolean startThread(){
+        L.d("ThreadState:" + _threadState, this);
+        if(_threadState == ThreadState.PAUSED || _threadState == ThreadState.INITIALIZED){
+            _handler.post(this);
+            return true;
+        }
+        return false;
+    }
+
+    // Getter and Picker
+
+    public CopyOnWriteArrayList<WifiDirectPeer> getAvailablePeers(){
+        CopyOnWriteArrayList<WifiDirectPeer> availablePeers = new CopyOnWriteArrayList<>();
+
+        Iterator<WifiDirectPeer> iterator = _peers.iterator();
+        while (iterator.hasNext()){
+            WifiDirectPeer current = iterator.next();
+            if(current.status == WifiP2pDevice.AVAILABLE && current.getLastUpdated() > 0){
+                availablePeers.add(current);
+            }
         }
 
-        _lastAddedKnowledge = knowledge;
-
-        if(!_isConnecting) _handler.post(this);
+        return availablePeers;
     }
 
-    private ArrayList<PeerSemanticTag> getKnowledgePeers(ASIPKnowledge knowledge){
-        ArrayList<PeerSemanticTag> temp = new ArrayList<>();
+    private CopyOnWriteArrayList<PeerSemanticTag> getKnowledgePeers(ASIPKnowledge knowledge){
+        CopyOnWriteArrayList<PeerSemanticTag> temp = new CopyOnWriteArrayList<>();
         try {
             Iterator<ASIPInformationSpace> asipInformationSpaceIterator = knowledge.informationSpaces();
             while (asipInformationSpaceIterator.hasNext()){
@@ -151,125 +320,19 @@ public class WifiDirectBroadcastManager implements Runnable{
         return temp;
     }
 
-    public void setPeers(ArrayList<WifiDirectPeer> peers){
-        _peers = peers;
-    }
-
-    public ArrayList<WifiDirectPeer> getAvailablePeers(){
-        ArrayList<WifiDirectPeer> availablePeers = new ArrayList<>();
-
-        Iterator<WifiDirectPeer> iterator = _peers.iterator();
-        while (iterator.hasNext()){
-            WifiDirectPeer current = iterator.next();
-            if(current.status == WifiP2pDevice.AVAILABLE && current.getLastUpdated() > 0){
-                availablePeers.add(current);
-            }
-        }
-
-        return availablePeers;
-    }
-
-    @Override
-    public void run() {
-        _isRunning = true;
-        // Keep running
-        // Do we have a running Connection?
-        // yes? return
-        // no? go on
-        // Do we have knowledge to send?
-        // no? return
-        // yes? try to connect to a peer
-            // do we have available peers?
-            // no? return
-            // yes? go on
-            // iterate the peers
-                // did we already sent the knowledge to the peer
-                // no? next
-                // yes?
-                // pick the peer
-            // do we have a peer?
-            // no? return
-            // yes? try to connect to the peer
-
-        if(_isConnected || _isTryingToSend){
-            L.d("Busy", this);
-            _handler.postDelayed(this, THREAD_TIMEOUT);
-            return;
-        } else if(_isConnecting) {
-            _isConnecting = false;
-            _handler.postDelayed(this, THREAD_TIMEOUT);
-        } else {
-            if(_map.isEmpty()){
-//                L.d("Map is empty", this);
-                return;
-            } else {
-                if(getAvailablePeers().isEmpty()){
-                    L.d("No available Peers", this);
-                    return;
-                } else {
-//                    L.d("okay try to send the Knowledge", this);
-//                    ArrayList<ASIPKnowledge> checkedKnowledges = new ArrayList<>();
-//                    ArrayList<WifiDirectPeer> checkedPeers = new ArrayList<>();
-                    WifiDirectPeer peer = null;
-
-                    Iterator<ASIPKnowledge> iterator = _map.keySet().iterator();
-                    while (iterator.hasNext() && peer==null){
-                        ASIPKnowledge knowledge = iterator.next();
-                        peer = pickPeer(knowledge);
-                        if(peer!=null){
-                            _knowledgeToSend = knowledge;
-                        }
-                    }
-
-                    if(_knowledgeToSend==null){
-                        L.d("To be sent Knowledge is null", this);
-                        return;
-                    }
-
-//                    L.d("Peer picked!", this);
-                    if(peer==null){
-                        L.d("Did not find any suitable peer", this);
-                        return;
-                    }
-//                    else if(peer.equals(_lastConnectedPeer)){
-//                        L.d("Do not try to connect to last Peer");
-//                        return;
-//                    }
-
-                    L.d("Connecting to Peer", this);
-
-                    _isConnecting = true;
-                    initConnection(peer);
-                    _lastConnectedPeer = peer;
-                    _isTryingToSend = true;
-
-                    if(_lastConnectedPeer!=null){
-                        int i = _peers.indexOf(_lastConnectedPeer);
-                        _lastConnectedPeer.resetUpdated();
-                        _peers.add(i, _lastConnectedPeer);
-                    }
-
-                    _handler.postDelayed(this, THREAD_TIMEOUT*3);
-                }
-            }
-        }
-
-        _isRunning = false;
-    }
-
-
-
     private WifiDirectPeer pickPeer(ASIPKnowledge knowledge){
-        if(_map.containsKey(knowledge)){
+        if(_mapWithPeers.containsKey(knowledge)){
 //            L.d("Knowledge found in map.", this);
-            ArrayList<PeerSemanticTag> peers = _map.get(knowledge);
+            CopyOnWriteArrayList<PeerSemanticTag> peers = _mapWithPeers.get(knowledge);
 
-            ArrayList availablePeers = getAvailablePeers();
+            CopyOnWriteArrayList availablePeers = getAvailablePeers();
 //            L.d("Size of availablePeers: " + availablePeers.size(), this);
-            Collections.sort(availablePeers);
+//            Collections.sort(availablePeers);
             Iterator<WifiDirectPeer> knownPeers = availablePeers.iterator();
             while (knownPeers.hasNext()){
                 WifiDirectPeer peer = knownPeers.next();
+
+//                L.d("Peers size: " + peers.size(), this);
 
                 if(peers.isEmpty()){
 //                    L.d("No peers to check against. return first peer", this);
@@ -311,68 +374,405 @@ public class WifiDirectBroadcastManager implements Runnable{
         return null;
     }
 
-    private void initConnection(WifiDirectPeer peer){
-        _manager.connect(peer);
+    // Thread Itself
+
+    @Override
+    public void run() {
+
+        _threadState = ThreadState.RUNNING;
+
+//        int threadRuns = 0;
+
+//        _isConnected = false;
+//        _isConnecting = false;
+//        _isDisconnected = false;
+//        _isRunning = false;
+//        _isOwner = false;
+//        _isSender = false;
+
+//        _hasNewPeers = false;
+//        _hasNewKnowledge = false;
+        L.d("WifiState: " + _wifiState, this);
+
+        while (true){
+            L.d("loop", this);
+            if(_wifiState == WifiState.CONNECTING) {
+//                // TODO
+//                try {
+//                    Thread.sleep(1000);
+//                } catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+//                threadRuns++;
+                return;
+            }
+            if(_wifiState == WifiState.DISCOVERING){
+                // We are not connected
+                L.d("We are not connected", this);
+//                if(_hasNewKnowledge || _hasNewPeers){
+//                    updateLists();
+//                    // Check what's new and set booleans to false;
+//                }
+                // Do we have knowldege?
+                if(_mapWithPeers.isEmpty()){
+                    // We have no knowledge to send
+                    break;
+                }
+                // Do we have peers?
+                if(getAvailablePeers().isEmpty()){
+                    //We have no Peers to send knowledge to.
+                    break;
+                }
+                // We have k and peers
+                // Go pick a knowledge and check if we can send it to one of our known peers
+                WifiDirectPeer peer = null;
+
+                Iterator<ASIPKnowledge> iterator = _mapWithPeers.keySet().iterator();
+                while (iterator.hasNext() && peer == null) {
+                    ASIPKnowledge knowledge = iterator.next();
+                    if (_mapWithCounts.get(knowledge) >= 5) continue;
+                    peer = pickPeer(knowledge);
+                    if (peer != null) {
+                        _knowledgeToSend = knowledge;
+                    }
+                }
+                // Did we found a knowledge?
+                if (_knowledgeToSend == null) {
+                    L.d("No Knowledge to send", this);
+                    break;
+                }
+
+                // And did we found a fitting peer?
+                if (peer == null) {
+                    L.d("Did not find any suitable peer", this);
+                    break;
+                }
+
+                // Okay we have a peer and knowledge
+                // Now check if we can update our lists
+//                if(_hasNewKnowledge || _hasNewPeers){
+//                    updateLists();
+//                    // Check what's new and set booleans to false;
+//                }
+
+                // Now check if the Peer is really still AVAILABLE
+                if(_devices.contains(peer)){
+                    int i = _devices.indexOf(peer);
+                    if(!(_devices.get(i).status == WifiP2pDevice.AVAILABLE)){
+                        // Peer is not available anymore
+                        break;
+                    }
+                } else {
+                    // Peer is not in the list of devices.
+                    break;
+                }
+
+                // Okay now really start sending this shi...
+
+                // Init the connection and set us to CONNECTING
+                _manager.connect(peer);
+                _wifiState = WifiState.CONNECTING;
+
+                _lastConnectedPeer = peer;
+                // Remove the lastUpdated from the currentPeer
+                _peers.remove(_lastConnectedPeer);
+                _lastConnectedPeer.resetUpdated();
+                _peers.add(_lastConnectedPeer);
+
+                break;
+                // Do not return... let it run until the state changes
+
+            }
+            else if(_wifiState == WifiState.CONNECTED){
+                // We are connected!!!!
+                L.d("We are connected", this);
+                if(_broadcastState == BroadcastState.ISOWNER || _broadcastState == BroadcastState.ISSENDERANDOWNER){
+                    try {
+                        _engine.startTCP(7071, _knowledgeToSend);
+                        _threadState = ThreadState.BLOCKED;
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                } else {
+                    try {
+                        Thread.sleep(5000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    ASIPKnowledge knowledge = null;
+                    if (_broadcastState == BroadcastState.ISSENDERANDCLIENT) {
+                        knowledge = _knowledgeToSend;
+                    }
+
+                    final ASIPKnowledge finalKnowledge = knowledge;
+
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            _threadState = ThreadState.SENDING;
+                            PeerSemanticTag tcpTag = InMemoSharkKB.createInMemoPeerSemanticTag("Receiver", "www.receiver.de", "tcp://" + _groupOwnerAddress + ":7071");
+                            ASIPOutMessage msg = _engine.createASIPOutMessage(tcpTag.getAddresses(), tcpTag);
+                            msg.insert(finalKnowledge);
+                        }
+                    }).start();
+
+                    // We reached the end so we probably sent the msg
+                    // leave the Thread
+                    return;
+                }
+                return;
+            }
+            else if(_wifiState == WifiState.TCPCLOSED){
+
+                if(_broadcastState == BroadcastState.ISOWNER || _broadcastState == BroadcastState.ISSENDERANDOWNER){
+                    L.d("I'm the OWNER so shutdown the server.", this);
+                    _engine.stopTCP();
+                }
+                _manager.disconnect();
+                _threadState = ThreadState.PAUSED;
+                break;
+            }
+            else if(_wifiState == WifiState.DISCONNECTED){
+                // Add peer to sent knowledge
+                L.d("We are disconnected", this);
+                if(_knowledgeToSend!=null){
+                    CopyOnWriteArrayList<PeerSemanticTag> peerSemanticTags = _mapWithPeers.get(_knowledgeToSend);
+                    peerSemanticTags.add(_lastConnectedPeer.getTag());
+                    L.d("Peer size:" + peerSemanticTags.size(), this);
+                    _mapWithPeers.put(_knowledgeToSend, peerSemanticTags);
+                    int count = _mapWithCounts.get(_knowledgeToSend);
+                    L.d("Count before:" + count, this);
+                    _mapWithCounts.put(_knowledgeToSend, ++count);
+                    L.d("Count after: " + _mapWithCounts.get(_knowledgeToSend), this);
+                    _knowledgeToSend=null;
+                }
+                _connectedGroup = null;
+                _connectionInfo = null;
+                _groupOwnerAddress = "";
+
+                _wifiState = WifiState.DISCOVERING;
+                // Restart the Thread
+                _threadState = ThreadState.PAUSED;
+                startThread();
+                return;
+            }
+        }
+        L.d("blob", this);
+        _threadState = ThreadState.PAUSED;
+
+
+//        while (true) {
+//            if (_threadState.equals(ThreadState.RUNNING)) return;
+//            _threadState = ThreadState.RUNNING;
+//
+//            if (_wifiState.equals(WifiState.CONNECTED)) {
+//                //            L.d("Currently connected to a device", this);
+//                //            _handler.postDelayed(this, THREAD_TIMEOUT*3);
+//                _threadState = ThreadState.BLOCKED;
+//                return;
+//            } else if (_wifiState.equals(WifiState.CONNECTING) && _threadState.equals(ThreadState.RUNNING)) {
+//                if (++_connectingCounter > _connectingLimit) {
+//                    _wifiState = WifiState.DISCOVERING;
+//                    _connectingCounter = 0;
+//                }
+//                _threadState = ThreadState.PAUSED;
+//                return;
+//            } else {
+//                if (_mapWithPeers.isEmpty()) {
+//                    //                L.d("Map is empty", this);
+//                    _threadState = ThreadState.PAUSED;
+//                    return;
+//                } else {
+//                    if (getAvailablePeers().isEmpty()) {
+//                        L.d("No available Peers", this);
+//                        _threadState = ThreadState.PAUSED;
+//                        return;
+//                    } else {
+//
+//                        //                    L.d("okay try to send the Knowledge", this);
+//                        //                    ArrayList<ASIPKnowledge> checkedKnowledges = new ArrayList<>();
+//                        //                    ArrayList<WifiDirectPeer> checkedPeers = new ArrayList<>();
+//                        WifiDirectPeer peer = null;
+//
+//                        Iterator<ASIPKnowledge> iterator = _mapWithPeers.keySet().iterator();
+//                        while (iterator.hasNext() && peer == null) {
+//                            ASIPKnowledge knowledge = iterator.next();
+//                            if (_mapWithCounts.get(knowledge) >= 5) continue;
+//                            peer = pickPeer(knowledge);
+//                            if (peer != null) {
+//                                _knowledgeToSend = knowledge;
+//                            }
+//                        }
+//
+//                        if (_knowledgeToSend == null) {
+//                            L.d("No Knowledge to send", this);
+//                            _threadState = ThreadState.PAUSED;
+//                            return;
+//                        }
+//
+//                        //                    L.d("Peer picked!", this);
+//                        if (peer == null) {
+//                            L.d("Did not find any suitable peer", this);
+//                            _threadState = ThreadState.PAUSED;
+//                            return;
+//                        }
+//                        //                    else if(peer.equals(_lastConnectedPeer)){
+//                        //                        L.d("Do not try to connect to last Peer");
+//                        //                        return;
+//                        //                    }
+//
+//                        L.d("Connecting to Peer", this);
+//
+//                        initConnection(peer);
+//                        _lastConnectedPeer = peer;
+//                        //                    _isSender = true;
+//
+//                        if (_lastConnectedPeer != null) {
+//                            _peers.remove(_lastConnectedPeer);
+//                            //                        int i = _peers.indexOf(_lastConnectedPeer);
+//                            _lastConnectedPeer.resetUpdated();
+//                            _peers.add(_lastConnectedPeer);
+//                        }
+//
+//                        _handler.postDelayed(this, THREAD_TIMEOUT * 3);
+//                        _threadState = ThreadState.PAUSED;
+//                    }
+//                }
+//            }
+//            _threadState = ThreadState.PAUSED;
+//        }
     }
+
+    // Listener
 
     public void onConnectionEstablished(WifiP2pInfo info, final WifiP2pGroup group){
 
-        _isConnected = true;
-        _isConnecting = false;
-        _isOwner = info.isGroupOwner;
+        // Oh yeah we're connected
+        // Check if we have an info and a group
+        // Otherwise try to disconnect and reset the States
+        if(info==null || group == null){
+            _manager.disconnect();
+            // TODO Resetting the States..
+        }
 
-        final String groupOwnerAddress = info.groupOwnerAddress.getHostAddress();
-        final WifiDirectPeer owner = new WifiDirectPeer(group.getOwner(), null);
+        _connectionInfo = info;
+        _connectedGroup = group;
 
-        if(_isOwner){
-            if(_knowledgeToSend==null){
-                L.d("OWNER!!!");
-            } else {
-                L.d("OWNER WITH KNOWLEDGE!!!");
-            }
-            try {
-                _engine.startTCP(7071, _knowledgeToSend);
-            } catch (IOException e) {
-                e.printStackTrace();
+        _wifiState = WifiState.CONNECTED;
+
+        // SET BROADCAST STATE
+        // SET the groupOwnerAddress
+        // And run the thread again
+
+        _groupOwnerAddress = info.groupOwnerAddress.getHostAddress();
+
+        if(info.isGroupOwner) {
+            _broadcastState = BroadcastState.ISOWNER;
+            if(_knowledgeToSend!=null){
+                _broadcastState = BroadcastState.ISSENDERANDOWNER;
             }
         } else {
-            if(_knowledgeToSend==null){
-                L.d("CLIENT!!!");
-            } else {
-                L.d("CLIENT WITH KNOWLEDGE!!!");
+            _broadcastState = BroadcastState.ISCLIENT;
+            if(_knowledgeToSend!=null){
+                _broadcastState = BroadcastState.ISSENDERANDCLIENT;
             }
-            try {
-                Thread.sleep(THREAD_TIMEOUT);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            ASIPKnowledge knowledge = null;
-            if(_isTryingToSend){
-                L.d("Active sender!", this);
-               knowledge = _knowledgeToSend;
-            }
-
-            final ASIPKnowledge finalKnowledge = knowledge;
-
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    PeerSemanticTag tcpTag = InMemoSharkKB.createInMemoPeerSemanticTag("Receiver", "www.receiver.de", "tcp://"+groupOwnerAddress+":7071");
-                    ASIPOutMessage msg = _engine.createASIPOutMessage(tcpTag.getAddresses(), tcpTag);
-                    msg.insert(finalKnowledge);
-                }
-            }).start();
         }
+        _threadState = ThreadState.PAUSED;
+        startThread();
+//        _threadState = ThreadState.BLOCKED;
+//
+//        final String groupOwnerAddress = info.groupOwnerAddress.getHostAddress();
+//        final WifiDirectPeer owner = new WifiDirectPeer(group.getOwner(), null);
+//
+//
+//        if(_broadcastState.equals(BroadcastState.ISOWNER) || _broadcastState.equals(BroadcastState.ISSENDERANDOWNER)){
+//            try {
+//                _engine.startTCP(7071, _knowledgeToSend);
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
+//        } else {
+//            try {
+//                Thread.sleep(2000);
+//            } catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }
+//            ASIPKnowledge knowledge = null;
+//            if(_broadcastState.equals(BroadcastState.ISSENDERANDCLIENT)){
+//               knowledge = _knowledgeToSend;
+//            }
+//
+//            final ASIPKnowledge finalKnowledge = knowledge;
+//
+//            new Thread(new Runnable() {
+//                @Override
+//                public void run() {
+//                    PeerSemanticTag tcpTag = InMemoSharkKB.createInMemoPeerSemanticTag("Receiver", "www.receiver.de", "tcp://"+groupOwnerAddress+":7071");
+//                    ASIPOutMessage msg = _engine.createASIPOutMessage(tcpTag.getAddresses(), tcpTag);
+//                    msg.insert(finalKnowledge);
+////                    _threadState = ThreadState.PAUSED;
+////                    _messageSent = true;
+//                }
+//            }).start();
+//        }
     }
 
     public void onDisconnected(){
-        _isConnected = false;
-        _isOwner = false;
-        _isTryingToSend = false;
+        _wifiState = WifiState.DISCONNECTED;
+        _broadcastState = BroadcastState.NOTINITIALIZED;
+
+        // Run the THREAD
+        startThread();
+
+//        _threadState = ThreadState.PAUSED;
+//        L.d("Wifi network closed.", this);
+//        L.d(_threadState.toString(), this);
+//        L.d(_wifiState.toString(), this);
+//        L.d(_broadcastState.toString(), this);
+
+        // Add peer to send knowledge
+//        if(_knowledgeToSend!=null){
+//            ArrayList<PeerSemanticTag> peerSemanticTags = _mapWithPeers.get(_knowledgeToSend);
+//            peerSemanticTags.add(_lastConnectedPeer.getTag());
+//            L.d("Peer size:" + peerSemanticTags.size(), this);
+//            _mapWithPeers.put(_knowledgeToSend, peerSemanticTags);
+//            int count = _mapWithCounts.get(_knowledgeToSend);
+//            L.d("Count before:" + count, this);
+//            _mapWithCounts.put(_knowledgeToSend, ++count);
+//            L.d("Count after: " + _mapWithCounts.get(_knowledgeToSend), this);
+////            _messageSent=false;
+//            _knowledgeToSend=null;
+//        }
+
+    }
+
+    @Override
+    public void connectionClosed() {
+        _threadState = ThreadState.PAUSED;
+        L.d("TCP Connection closed", this);
+        _wifiState = WifiState.TCPCLOSED;
+        // run the THREAD
+
+        startThread();
+
+//        if(_broadcastState == BroadcastState.ISOWNER || _broadcastState == BroadcastState.ISSENDERANDOWNER){
+//            L.d("I'm the OWNER so shutdown the server.", this);
+//            _engine.stopTCP();
+//        }
+//        _manager.disconnect();
     }
 
     public void notifyUpdate(){
-        L.d("Update", this);
-        if(!_isConnecting) _handler.post(this);
+        boolean started = startThread();
+        L.d("Update + StartThread:" + started, this);
+//        L.d(_threadState.toString(), this);
+//        L.d(_wifiState.toString(), this);
+//        L.d(_broadcastState.toString(), this);
+//        if(!_wifiState.equals(WifiState.CONNECTED) ||
+//                !_wifiState.equals(WifiState.CONNECTING) ||
+//                !_threadState.equals(ThreadState.BLOCKED) ||
+//                !_threadState.equals(ThreadState.RUNNING)){
+//            _handler.post(this);
+//        }
     }
 }

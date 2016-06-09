@@ -53,6 +53,7 @@ public class WifiDirectManager
     public int _status;
 
     private int _INTERVALL = 10000;
+    private boolean _isOwner;
 
     public WifiDirectManager(WifiP2pManager manager, Context context, WifiDirectStreamStub stub) {
         _manager = manager;
@@ -75,8 +76,25 @@ public class WifiDirectManager
 
     @Override
     public void run() {
-        _manager.discoverServices(_channel, new WifiActionListener("Discover Services"));
-        _handler.postDelayed(this, _INTERVALL);
+        final Runnable that = this;
+        _manager.discoverServices(_channel, new WifiP2pManager.ActionListener() {
+            @Override
+            public void onSuccess() {
+                _handler.postDelayed(that, _INTERVALL);
+            }
+
+            @Override
+            public void onFailure(int reason) {
+
+                _manager.clearServiceRequests(_channel, new WifiActionListener("Clear ServiceRequests"));
+                WifiP2pDnsSdServiceRequest serviceRequest = WifiP2pDnsSdServiceRequest.newInstance();
+                _manager.addServiceRequest(_channel, serviceRequest, new WifiActionListener("Add ServiceRequest"));
+
+                initAdvertising();
+
+                _handler.postDelayed(that, _INTERVALL);
+            }
+        });
     }
 
     public boolean start() {
@@ -179,14 +197,17 @@ public class WifiDirectManager
     }
 
     public void disconnect(){
-        if(_status==CONNECTED){
-            _manager.requestGroupInfo(_channel, new WifiP2pManager.GroupInfoListener() {
-                @Override
-                public void onGroupInfoAvailable(WifiP2pGroup group) {
+        final Runnable that = this;
+        _manager.requestGroupInfo(_channel, new WifiP2pManager.GroupInfoListener() {
+            @Override
+            public void onGroupInfoAvailable(WifiP2pGroup group) {
+                if(group==null) return;
+                if(group.isGroupOwner()){
                     _manager.removeGroup(_channel, new WifiActionListener("Remove Group"));
+                    _handler.postDelayed(that, _INTERVALL);
                 }
-            });
-        }
+            }
+        });
     }
 
     public void offerInterest(ASIPSpace space) {
@@ -214,14 +235,15 @@ public class WifiDirectManager
 
         } else if (WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION.equals(action)) {
             NetworkInfo networkInfo = (NetworkInfo) intent.getParcelableExtra(WifiP2pManager.EXTRA_NETWORK_INFO);
-            L.d("Network: " + networkInfo, this);
+//            L.d("Network: " + networkInfo, this);
             if(networkInfo.isConnected()){
                 _status = CONNECTED;
                 _manager.requestConnectionInfo(_channel, _stub);
             } else {
                 if(_status==CONNECTED){
                     _stub.onDisconnected();
-                    start();
+//                    start();
+
                 }
                 _status = DISCOVERING;
             }
