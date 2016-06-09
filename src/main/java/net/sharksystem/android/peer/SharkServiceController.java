@@ -141,6 +141,10 @@ public class SharkServiceController
         return _peers;
     }
 
+    public void resetPeers(){
+        _peers = new ArrayList<>();
+    }
+
     public void sendBroadcast(String text){
         _sharkService.sendBroadcast(text);
     }

@@ -46,6 +46,7 @@ public class SharkService extends Service {
         _engine = new AndroidSharkEngine(this);
         _knowledgePorts = new ArrayList<>();
         _kpNotifier = new WifiDirectKPNotifier(this);
+        L.d("Service created", this);
 //        testing();
     }
 
@@ -89,6 +90,7 @@ public class SharkService extends Service {
 
     @Override
     public void onDestroy() {
+        L.d("Service destroyed", this);
         stopEngine();
     }
 
