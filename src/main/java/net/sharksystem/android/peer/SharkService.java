@@ -9,12 +9,10 @@ import android.os.IBinder;
 
 import net.sharkfw.kep.SharkProtocolNotSupportedException;
 import net.sharkfw.knowledgeBase.inmemory.InMemoSharkKB;
-import net.sharkfw.kp.FilterKP;
 import net.sharkfw.peer.KnowledgePort;
 import net.sharkfw.system.L;
 import net.sharksystem.android.protocols.wifidirect.RadarKP;
 import net.sharksystem.android.protocols.wifidirect.WifiDirectKPNotifier;
-import net.sharksystem.android.protocols.wifidirect.WifiDirectPeer;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -40,6 +38,9 @@ public class SharkService extends Service {
     private ArrayList<KnowledgePort> _knowledgePorts;
     private WifiDirectKPNotifier _kpNotifier;
 
+    private String mNameToOffer;
+    private String mInterestToOffer;
+
 
     @Override
     public void onCreate() {
@@ -61,6 +62,8 @@ public class SharkService extends Service {
             if(_knowledgePorts.isEmpty())
                 addKP(new RadarKP(_engine, InMemoSharkKB.createInMemoASIPInterest(), _kpNotifier));
             try {
+//                _engine.
+                _engine.offerInterest(mInterestToOffer, mNameToOffer);
                 _engine.startWifiDirect();
             } catch (IOException e) {
                 e.printStackTrace();
@@ -74,6 +77,7 @@ public class SharkService extends Service {
     public void stopEngine(){
         if(_isEngineStarted){
             try {
+                L.d("Stop Wifi", this);
                 _engine.stopWifiDirect();
             } catch (SharkProtocolNotSupportedException e) {
                 e.printStackTrace();
@@ -92,6 +96,7 @@ public class SharkService extends Service {
     public void onDestroy() {
         L.d("Service destroyed", this);
         stopEngine();
+        stopSelf();
     }
 
     @Override
@@ -119,5 +124,13 @@ public class SharkService extends Service {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+    }
+
+    public void setNameToOffer(String mNameToOffer) {
+        this.mNameToOffer = mNameToOffer;
+    }
+
+    public void setInterestToOffer(String mInterestToOffer) {
+        this.mInterestToOffer = mInterestToOffer;
     }
 }

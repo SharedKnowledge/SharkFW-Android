@@ -3,11 +3,11 @@ package net.sharksystem.android.protocols.wifidirect;
 import android.net.wifi.p2p.WifiP2pDevice;
 
 import net.sharkfw.asip.ASIPInterest;
-import net.sharkfw.asip.ASIPSpace;
 import net.sharkfw.asip.engine.ASIPSerializer;
 import net.sharkfw.knowledgeBase.PeerSemanticTag;
 import net.sharkfw.knowledgeBase.SharkKBException;
 import net.sharkfw.knowledgeBase.inmemory.InMemoSharkKB;
+import net.sharkfw.system.L;
 
 import java.util.Map;
 
@@ -18,7 +18,9 @@ public class WifiDirectPeer extends WifiP2pDevice implements Comparable<WifiDire
 
     public static final String WIFI_PROTOCOL = "wifi://";
 
-    private ASIPInterest _interest = null;
+    private ASIPInterest mInterest = null;
+    private String  mInterestString = "";
+    private String mName = "";
     private PeerSemanticTag _tag;
 
     private long _lastUpdated;
@@ -27,24 +29,40 @@ public class WifiDirectPeer extends WifiP2pDevice implements Comparable<WifiDire
         super(device);
         _lastUpdated = System.currentTimeMillis();
 
-        try {
-            _tag = InMemoSharkKB.createInMemoPeerSemanticTag(deviceName, "www.sharksystem.de/" + deviceName, WIFI_PROTOCOL + deviceAddress);
-            if(txtRecordsMap != null){
-                _interest = ASIPSerializer.deserializeASIPInterest(txtRecordsMap.get("interest"));
-                _interest.setSender(_tag);
+        if(txtRecordsMap != null){
+            if(txtRecordsMap.containsKey("interest")){
+                mInterestString = txtRecordsMap.get("interest");
+            } if(txtRecordsMap.containsKey("name")){
+                mName = txtRecordsMap.get("name");
             }
+        }
+
+        try {
+            String peerName = "";
+            if(!mName.isEmpty()){
+                peerName = mName;
+            } else if (!deviceName.isEmpty()){
+                peerName = deviceName;
+            } else {
+                peerName = "Anonym";
+            }
+            _tag = InMemoSharkKB.createInMemoPeerSemanticTag(peerName, "www.sharksystem.de/" + peerName, WIFI_PROTOCOL + deviceAddress);
+            mInterest = ASIPSerializer.deserializeASIPInterest(mInterestString);
+            mInterest.setSender(_tag);
         } catch (SharkKBException e) {
             e.printStackTrace();
         }
     }
 
     public WifiDirectPeer(PeerSemanticTag tag, ASIPInterest interest){
+
+        _lastUpdated = System.currentTimeMillis();
         _tag = tag;
-        _interest = interest;
+        mInterest = interest;
         if(_tag.getName().isEmpty()){
-            deviceName = _interest.getSender().getName();
+            mName = mInterest.getSender().getName();
         } else {
-            deviceName = _tag.getName();
+            mName = _tag.getName();
         }
         String[] addresses = _tag.getAddresses();
         if(addresses[0].startsWith(WIFI_PROTOCOL)){
@@ -54,8 +72,12 @@ public class WifiDirectPeer extends WifiP2pDevice implements Comparable<WifiDire
         }
     }
 
-    public ASIPInterest getInterest(){
-        return _interest;
+    public String getName() {
+        return mName;
+    }
+
+    public ASIPInterest getmInterest(){
+        return mInterest;
     }
 
     public PeerSemanticTag getTag() {

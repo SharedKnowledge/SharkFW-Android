@@ -7,21 +7,17 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
-import android.net.wifi.p2p.WifiP2pGroup;
-import android.net.wifi.p2p.WifiP2pInfo;
+import android.os.Handler;
 import android.os.IBinder;
 import android.support.v4.content.LocalBroadcastManager;
-import android.widget.Toast;
 
 import net.sharkfw.asip.ASIPInterest;
 import net.sharkfw.asip.engine.ASIPSerializer;
 import net.sharkfw.knowledgeBase.SharkKBException;
-import net.sharkfw.system.L;
 import net.sharksystem.android.protocols.wifidirect.WifiDirectKPNotifier;
-import net.sharksystem.android.protocols.wifidirect.WifiDirectListener;
 import net.sharksystem.android.protocols.wifidirect.WifiDirectPeer;
 
-import java.util.ArrayList;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Created by j4rvis on 26.04.16.
@@ -30,72 +26,81 @@ public class SharkServiceController
         extends BroadcastReceiver
         implements ServiceConnection {
 
-    private ArrayList<WifiDirectPeer> _peers = null;
+    private CopyOnWriteArrayList<WifiDirectPeer> mPeers = null;
 
-    private boolean _isBound;
-    private Intent _intent = null;
-    private Context _context = null;
-    private static SharkServiceController _instance;
-    private SharkService _sharkService;
+    private boolean mIsBound;
+    private Intent mIntent = null;
+    private Context mContext = null;
+    private static SharkServiceController mInstance;
+    private SharkService mSharkService;
+    private String mName = "Name";
+    private String mInterest = "Interesse";
+
 
     public static synchronized SharkServiceController getInstance(Context context) {
-        if (_instance == null)
-            _instance = new SharkServiceController(context);
-        return _instance;
+        if (mInstance == null)
+            mInstance = new SharkServiceController(context);
+        return mInstance;
     }
 
     public SharkServiceController(Context context) {
-        _context = context.getApplicationContext();
-        _peers = new ArrayList<>();
+        mContext = context.getApplicationContext();
+        mPeers = new CopyOnWriteArrayList<>();
 
-        _intent = new Intent(_context, SharkService.class);
-        _context.startService(_intent);
+        mIntent = new Intent(mContext, SharkService.class);
+        mIntent.putExtra("name", mName);
+        mIntent.putExtra("interest", mInterest);
     }
 
     public void stopService(){
-        _context.stopService(_intent);
+        mContext.stopService(mIntent);
     }
 
     public void bindToService(){
         registerReceiver();
-//        Toast.makeText(_context, "Binding...", Toast.LENGTH_SHORT).show();
-        if(!_isBound){
-            _isBound = _context.bindService(_intent, this, _context.BIND_AUTO_CREATE);
+//        Toast.makeText(mContext, "Binding...", Toast.LENGTH_SHORT).show();
+        if(!mIsBound){
+            mIsBound = mContext.bindService(mIntent, this, mContext.BIND_AUTO_CREATE);
         }
     }
 
+    public void setOffer(String name, String interest){
+        mName = name;
+        mInterest = interest;
+    }
+
     public void unbindFromService(){
-        LocalBroadcastManager.getInstance(_context).unregisterReceiver(this);
-        if(_isBound){
-//            Toast.makeText(_context, "Unbinding...", Toast.LENGTH_SHORT).show();
-            _context.unbindService(this);
-            _isBound = false;
+        LocalBroadcastManager.getInstance(mContext).unregisterReceiver(this);
+        if(mIsBound){
+            mContext.unbindService(this);
+            mIsBound = false;
         }
-        stopService();
     }
 
     @Override
     public void onServiceConnected(ComponentName name, IBinder service) {
-//        Toast.makeText(_context, "Service is connected", Toast.LENGTH_SHORT).show();
-        _isBound = true;
+        mIsBound = true;
         SharkService.LocalBinder localBinder = (SharkService.LocalBinder) service;
-        _sharkService = localBinder.getInstance();
+        mSharkService = localBinder.getInstance();
+
+        mSharkService.setInterestToOffer(mInterest);
+        mSharkService.setNameToOffer(mName);
 
         // Set engine and kp if wanted
-        _sharkService.startEngine();
+        mSharkService.startEngine();
     }
 
     @Override
     public void onServiceDisconnected(ComponentName name) {
-//        Toast.makeText(_context, "Service is disconnected", Toast.LENGTH_SHORT).show();
-        _isBound = false;
-        _sharkService = null;
+        mIsBound = false;
+        mSharkService = null;
+        stopService();
     }
 
     private void registerReceiver(){
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(WifiDirectKPNotifier.NEW_INTEREST_ACTION);
-        LocalBroadcastManager.getInstance(_context).registerReceiver(
+        LocalBroadcastManager.getInstance(mContext).registerReceiver(
                 this, intentFilter);
     }
 
@@ -115,20 +120,20 @@ public class SharkServiceController
 
             WifiDirectPeer newPeer = new WifiDirectPeer(interest.getSender(), interest);
 
-            if (this._peers.contains(newPeer)) {
-                WifiDirectPeer peer = this._peers.get(this._peers.indexOf(newPeer));
+            if (mPeers.contains(newPeer)) {
+                WifiDirectPeer peer = mPeers.get(mPeers.indexOf(newPeer));
                 if (peer.getLastUpdated() < newPeer.getLastUpdated()) {
-                    this._peers.remove(peer);
-                    this._peers.add(newPeer);
+                    mPeers.remove(peer);
+                    mPeers.add(newPeer);
                 }
             } else {
-                this._peers.add(newPeer);
+                mPeers.add(newPeer);
             }
         }
     }
 
     private boolean isServiceRunning() {
-        ActivityManager manager = (ActivityManager) _context.getSystemService(Context.ACTIVITY_SERVICE);
+        ActivityManager manager = (ActivityManager) mContext.getSystemService(Context.ACTIVITY_SERVICE);
         for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
             if (SharkService.class.getName().equals(service.service.getClassName())) {
                 return true;
@@ -137,15 +142,16 @@ public class SharkServiceController
         return false;
     }
 
-    public ArrayList<WifiDirectPeer> getPeers(){
-        return _peers;
+    public CopyOnWriteArrayList<WifiDirectPeer> getPeers(){
+        return mPeers;
     }
 
     public void resetPeers(){
-        _peers = new ArrayList<>();
+        mPeers = new CopyOnWriteArrayList<>();
     }
 
     public void sendBroadcast(String text){
-        _sharkService.sendBroadcast(text);
+        mSharkService.sendBroadcast(text);
     }
+
 }

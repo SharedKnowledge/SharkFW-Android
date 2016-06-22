@@ -54,6 +54,7 @@ public class WifiDirectManager
 
     private int _INTERVALL = 10000;
     private boolean _isOwner;
+    private String mName;
 
     public WifiDirectManager(WifiP2pManager manager, Context context, WifiDirectStreamStub stub) {
         _manager = manager;
@@ -61,6 +62,10 @@ public class WifiDirectManager
         _stub = stub;
 
         _channel =_manager.initialize(_context, _context.getMainLooper(), null);
+
+        WifiDirectAutoAccept wifiDirectAutoAccept = new WifiDirectAutoAccept(_context);
+        wifiDirectAutoAccept.intercept(true);
+
         _manager.setDnsSdResponseListeners(_channel, null, _stub);
 
         _handler = new Handler();
@@ -69,9 +74,10 @@ public class WifiDirectManager
         _status = INITIALIZED;
     }
 
-    public WifiDirectManager(WifiP2pManager manager, Context context, WifiDirectStreamStub stub, ASIPSpace space) {
+    public WifiDirectManager(WifiP2pManager manager, Context context, WifiDirectStreamStub stub, ASIPSpace space, String name) {
         this(manager, context, stub);
         _interest = space;
+        mName = name;
     }
 
     @Override
@@ -128,10 +134,14 @@ public class WifiDirectManager
     }
 
     public boolean stop() {
+        L.d("isStarted:" + _isStarted, this);
         if(_isStarted){
+
+            L.d("Clear", this);
 
             _handler.removeCallbacks(this);
             _manager.clearServiceRequests(_channel, new WifiActionListener("Clear ServiceRequests"));
+            _manager.removeLocalService(_channel, _serviceInfo, new WifiActionListener("Remove LocalService"));
             _manager.clearLocalServices(_channel, new WifiActionListener("Clear LocalServices"));
 
             if(_isReceiverRegistered){
@@ -139,6 +149,7 @@ public class WifiDirectManager
                 _isReceiverRegistered = false;
             }
             disconnect();
+            _isStarted=false;
         }
         return _isStarted;
     }
@@ -164,18 +175,22 @@ public class WifiDirectManager
     private void initAdvertising(){
         _manager.clearLocalServices(_channel, new WifiActionListener("Clear LocalServices"));
 
-        if(_interest != null){
-            String parsedInterest = "";
-            try {
-                parsedInterest = ASIPSerializer.serializeASIPSpace(_interest).toString();
-                _map.put("interest", parsedInterest);
-            } catch (SharkKBException e) {
-                e.printStackTrace();
-            }
-        } else {
-            // Add empty interest?
-            _map.put("interest", "no interest");
+        String interest = "";
+        String name = "";
+
+        try {
+            interest = ASIPSerializer.serializeASIPSpace(_interest).toString();
+        } catch (SharkKBException e) {
+            e.printStackTrace();
         }
+        if(mName==null || mName.isEmpty()){
+            name = "Anonym";
+        } else {
+            name = mName;
+        }
+        _map.put("interest", interest);
+        _map.put("name", name);
+
         _serviceInfo = WifiP2pDnsSdServiceInfo.newInstance("_sbc", "_presence._tcp", _map);
         _manager.addLocalService(_channel, _serviceInfo, new WifiActionListener("Add LocalService"));
     }
@@ -212,7 +227,8 @@ public class WifiDirectManager
 
     public void offerInterest(ASIPSpace space) {
         _interest = space;
-        resetDNSMap();
+        mName = space.getSender().getName();
+//        resetDNSMap();
     }
 
     @Override

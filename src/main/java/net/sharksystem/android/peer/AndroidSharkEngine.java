@@ -7,6 +7,7 @@ import net.sharkfw.asip.ASIPKnowledge;
 import net.sharkfw.asip.ASIPSpace;
 import net.sharkfw.asip.SharkStub;
 import net.sharkfw.kep.SharkProtocolNotSupportedException;
+import net.sharkfw.knowledgeBase.PeerSemanticTag;
 import net.sharkfw.knowledgeBase.STSet;
 import net.sharkfw.knowledgeBase.SemanticTag;
 import net.sharkfw.knowledgeBase.SharkKBException;
@@ -26,6 +27,8 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine {
     Context context;
     WeakReference<Activity> activityRef;
     Stub currentStub;
+    private ASIPSpace mSpace;
+    private String mName;
 
     public AndroidSharkEngine(Context context) {
         super();
@@ -46,7 +49,7 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine {
      */
     protected Stub createWifiDirectStreamStub(SharkStub kepStub) throws SharkProtocolNotSupportedException {
         if (currentStub == null) {
-            currentStub = new WifiDirectStreamStub(context, this);
+            currentStub = new WifiDirectStreamStub(context, this, mSpace, mName);
             currentStub.setHandler((RequestHandler) kepStub);
         }
         return currentStub;
@@ -105,19 +108,20 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine {
 //        return currentStub;
     }
 
-    public void offerInterest(String topic){
+    public void offerInterest(String topic, String name){
+
         if(topic.isEmpty())
-           return;
+           topic = "Dummy Interesse";
 
         STSet set = InMemoSharkKB.createInMemoSTSet();
         ASIPSpace space;
         try {
             set.createSemanticTag(topic, "www."+topic+".sharksystem.net");
-            space =  InMemoSharkKB.createInMemoASIPInterest(set, null, getOwner(), null, null, null, null, ASIPSpace.DIRECTION_INOUT);
-            currentStub.offer(space);
+            space =  InMemoSharkKB.createInMemoASIPInterest(set, null, (PeerSemanticTag) null, null, null, null, null, ASIPSpace.DIRECTION_INOUT);
+            mSpace = space;
+            mName = name;
+//            currentStub.offer(space);
         } catch (SharkKBException e) {
-            e.printStackTrace();
-        } catch (SharkNotSupportedException e) {
             e.printStackTrace();
         }
 

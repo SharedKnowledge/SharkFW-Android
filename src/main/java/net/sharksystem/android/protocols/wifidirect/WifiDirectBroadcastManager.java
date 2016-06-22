@@ -275,7 +275,7 @@ public class WifiDirectBroadcastManager implements Runnable, ConnectionStatusLis
     }
 
     private boolean startThread(){
-        L.d("ThreadState:" + _threadState, this);
+//        L.d("ThreadState:" + _threadState, this);
         if(_threadState == ThreadState.PAUSED || _threadState == ThreadState.INITIALIZED){
             _handler.post(this);
             return true;
@@ -392,10 +392,10 @@ public class WifiDirectBroadcastManager implements Runnable, ConnectionStatusLis
 
 //        _hasNewPeers = false;
 //        _hasNewKnowledge = false;
-        L.d("WifiState: " + _wifiState, this);
+//        L.d("WifiState: " + _wifiState, this);
 
         while (true){
-            L.d("loop", this);
+//            L.d("loop", this);
             if(_wifiState == WifiState.CONNECTING) {
 //                // TODO
 //                try {
@@ -408,7 +408,7 @@ public class WifiDirectBroadcastManager implements Runnable, ConnectionStatusLis
             }
             if(_wifiState == WifiState.DISCOVERING){
                 // We are not connected
-                L.d("We are not connected", this);
+//                L.d("We are not connected", this);
 //                if(_hasNewKnowledge || _hasNewPeers){
 //                    updateLists();
 //                    // Check what's new and set booleans to false;
@@ -557,7 +557,7 @@ public class WifiDirectBroadcastManager implements Runnable, ConnectionStatusLis
                 return;
             }
         }
-        L.d("blob", this);
+//        L.d("blob", this);
         _threadState = ThreadState.PAUSED;
 
 
@@ -764,7 +764,7 @@ public class WifiDirectBroadcastManager implements Runnable, ConnectionStatusLis
 
     public void notifyUpdate(){
         boolean started = startThread();
-        L.d("Update + StartThread:" + started, this);
+//        L.d("Update + StartThread:" + started, this);
 //        L.d(_threadState.toString(), this);
 //        L.d(_wifiState.toString(), this);
 //        L.d(_broadcastState.toString(), this);

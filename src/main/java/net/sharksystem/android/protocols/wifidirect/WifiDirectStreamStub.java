@@ -3,50 +3,34 @@ package net.sharksystem.android.protocols.wifidirect;
 import android.annotation.TargetApi;
 import android.content.Context;
 import android.net.wifi.p2p.WifiP2pDevice;
-import android.net.wifi.p2p.WifiP2pDeviceList;
 import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.os.Build;
-import android.os.Handler;
-import android.widget.Toast;
 
-import net.sharkfw.asip.ASIPInterest;
 import net.sharkfw.asip.ASIPKnowledge;
 import net.sharkfw.asip.ASIPSpace;
 import net.sharkfw.asip.engine.ASIPInMessage;
-import net.sharkfw.asip.engine.ASIPOutMessage;
-import net.sharkfw.asip.engine.ASIPSerializer;
 import net.sharkfw.knowledgeBase.Knowledge;
-import net.sharkfw.knowledgeBase.PeerSTSet;
 import net.sharkfw.knowledgeBase.PeerSemanticTag;
 import net.sharkfw.knowledgeBase.STSet;
-import net.sharkfw.knowledgeBase.SharkAlgebra;
 import net.sharkfw.knowledgeBase.SharkKBException;
 import net.sharkfw.knowledgeBase.inmemory.InMemoSharkKB;
 import net.sharkfw.protocols.ConnectionStatusListener;
 import net.sharkfw.protocols.RequestHandler;
 import net.sharkfw.protocols.StreamConnection;
 import net.sharkfw.protocols.StreamStub;
-import net.sharkfw.protocols.tcp.TCPConnection;
 import net.sharkfw.system.L;
 import net.sharkfw.system.SharkNotSupportedException;
 import net.sharksystem.android.peer.AndroidSharkEngine;
 
-import org.json.JSONException;
-
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
-import java.net.NetworkInterface;
-import java.net.SocketException;
-import java.security.cert.LDAPCertStoreParameters;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -82,24 +66,25 @@ public class WifiDirectStreamStub
     private ASIPKnowledge _currentKnowledge;
     private WifiDirectPeer _currentPeer;
     private boolean _isSender = false;
+    private ASIPSpace mSpace;
 
-    public WifiDirectStreamStub(Context context, AndroidSharkEngine engine) {
+    public WifiDirectStreamStub(Context context, AndroidSharkEngine engine, ASIPSpace space, String name) {
         _context = context;
         _engine = engine;
 
         _manager = (WifiP2pManager) _context.getSystemService(Context.WIFI_P2P_SERVICE);
 
-        STSet topics = InMemoSharkKB.createInMemoSTSet();
-        ASIPSpace space = null;
-        try {
-            topics.createSemanticTag("Java", "www.java.com");
-            topics.createSemanticTag("Android", "www.android.com");
-            space = InMemoSharkKB.createInMemoASIPInterest(topics, null, _engine.getOwner(), null, null, null, null, ASIPSpace.DIRECTION_INOUT);
-        } catch (SharkKBException e) {
-            e.printStackTrace();
-        }
+//        STSet topics = InMemoSharkKB.createInMemoSTSet();
+//        ASIPSpace space = null;
+//        try {
+//            topics.createSemanticTag("Beispielinteresse", "www.java.com");
+////            topics.createSemanticTag("Android", "www.android.com");
+//            space = InMemoSharkKB.createInMemoASIPInterest(topics, null, _engine.getOwner(), null, null, null, null, ASIPSpace.DIRECTION_INOUT);
+//        } catch (SharkKBException e) {
+//            e.printStackTrace();
+//        }
 
-        _wifiDirectManager = new WifiDirectManager(_manager, _context, this, space);
+        _wifiDirectManager = new WifiDirectManager(_manager, _context, this, space, name);
 
         _wifiDirectBroadcastManager = WifiDirectBroadcastManager.getInstance(_context);
         _wifiDirectBroadcastManager.setWifiDirectManager(_wifiDirectManager);
@@ -112,7 +97,10 @@ public class WifiDirectStreamStub
 
     @Override
     public void stop() {
-        if (_isStarted) _isStarted = _wifiDirectManager.stop();
+        L.d("isStarted:" + _isStarted, this);
+        if (_isStarted) {
+            _isStarted = _wifiDirectManager.stop();
+        }
     }
 
     @Override
@@ -120,7 +108,7 @@ public class WifiDirectStreamStub
         if (!_isStarted) _isStarted = _wifiDirectManager.start();
     }
 
-    private void updateDevice(WifiP2pDevice device){
+    private void updateDevices(WifiP2pDevice device){
         if(_knownDevices.contains(device)){
             _knownDevices.remove(device);
             _knownDevices.add(device);
@@ -160,7 +148,7 @@ public class WifiDirectStreamStub
     public void onDnsSdTxtRecordAvailable(String fullDomainName, Map<String, String> txtRecordMap, WifiP2pDevice srcDevice) {
 
         // Add device to knownDevices list.
-        updateDevice(srcDevice);
+        updateDevices(srcDevice);
         // Add peer tp list
         WifiDirectPeer peer = new WifiDirectPeer(srcDevice, txtRecordMap);
         addPeer(peer);
@@ -170,7 +158,7 @@ public class WifiDirectStreamStub
         _wifiDirectBroadcastManager.notifyUpdate();
 
         // Send interest to KP
-        ASIPInMessage msg = new ASIPInMessage(_engine, peer.getInterest(), _engine.getAsipStub());
+        ASIPInMessage msg = new ASIPInMessage(_engine, peer.getmInterest(), _engine.getAsipStub());
         msg.setTtl(10);
         msg.setSender(peer.getTag());
 
