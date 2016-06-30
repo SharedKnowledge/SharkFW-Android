@@ -18,6 +18,7 @@ import net.sharkfw.system.L;
 import net.sharksystem.android.protocols.wifidirect.RadarKP;
 
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 
 /**
@@ -43,13 +44,14 @@ public class SharkService extends Service implements KPNotifier {
     private String mNameToOffer;
     private String mInterestToOffer;
 
-    private KPListener mListener;
+    private ArrayList<KPListener> mListeners;
 
 
     @Override
     public void onCreate() {
         _engine = new AndroidSharkEngine(this);
         _knowledgePorts = new ArrayList<>();
+        mListeners = new ArrayList<>();
         L.d("Service created", this);
 
 //        testing();
@@ -66,7 +68,6 @@ public class SharkService extends Service implements KPNotifier {
         L.d("Service destroyed", this);
 
         stopEngine();
-        stopSelf();
     }
 
     @Override
@@ -76,22 +77,34 @@ public class SharkService extends Service implements KPNotifier {
 
     @Override
     public void notifyInterestReceived(ASIPInterest asipInterest, ASIPConnection asipConnection) {
-        if (mListener != null) {
-            //App should be running...
-            mListener.onNewInterest(asipInterest);
+        if (mListeners.size() > 0) {
+            // there are listeners, so notify them
+            for (KPListener listener : mListeners) {
+                listener.onNewInterest(asipInterest);
+            }
         } else {
-            //otherwise maybe send android notification?
+            // maybe send an android notification?
         }
     }
 
     @Override
     public void notifyKnowledgeReceived(ASIPKnowledge asipKnowledge, ASIPConnection asipConnection) {
-        if (mListener != null) {
-            //App should be running...
-            mListener.onNewKnowledge(asipKnowledge);
+        if (mListeners.size() > 0) {
+            // there are listeners, so notify them
+            for (KPListener listener : mListeners) {
+                listener.onNewKnowledge(asipKnowledge);
+            }
         } else {
-            //otherwise maybe send android notification?
+            // maybe send an android notification?
         }
+    }
+
+    public void addKPListener(KPListener listener) {
+        mListeners.add(listener);
+    }
+
+    public void removeKPListener(KPListener listener) {
+
     }
 
     public void addKP(KnowledgePort kp) {
