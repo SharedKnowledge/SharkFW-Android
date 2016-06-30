@@ -7,13 +7,15 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
-import android.os.Handler;
 import android.os.IBinder;
 import android.support.v4.content.LocalBroadcastManager;
+import android.util.Log;
 
 import net.sharkfw.asip.ASIPInterest;
+import net.sharkfw.asip.ASIPKnowledge;
 import net.sharkfw.asip.engine.ASIPSerializer;
 import net.sharkfw.knowledgeBase.SharkKBException;
+import net.sharksystem.android.protocols.routing.service.LocationService;
 import net.sharksystem.android.protocols.wifidirect.WifiDirectKPNotifier;
 import net.sharksystem.android.protocols.wifidirect.WifiDirectPeer;
 
@@ -22,9 +24,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 /**
  * Created by j4rvis on 26.04.16.
  */
-public class SharkServiceController
-        extends BroadcastReceiver
-        implements ServiceConnection {
+public class SharkServiceController implements ServiceConnection, KPListener {
 
     private CopyOnWriteArrayList<WifiDirectPeer> mPeers = null;
 
@@ -43,38 +43,13 @@ public class SharkServiceController
         return mInstance;
     }
 
-    public SharkServiceController(Context context) {
+    private SharkServiceController(Context context) {
         mContext = context.getApplicationContext();
         mPeers = new CopyOnWriteArrayList<>();
 
         mIntent = new Intent(mContext, SharkService.class);
         mIntent.putExtra("name", mName);
         mIntent.putExtra("interest", mInterest);
-    }
-
-    public void stopService(){
-        mContext.stopService(mIntent);
-    }
-
-    public void bindToService(){
-        registerReceiver();
-//        Toast.makeText(mContext, "Binding...", Toast.LENGTH_SHORT).show();
-        if(!mIsBound){
-            mIsBound = mContext.bindService(mIntent, this, mContext.BIND_AUTO_CREATE);
-        }
-    }
-
-    public void setOffer(String name, String interest){
-        mName = name;
-        mInterest = interest;
-    }
-
-    public void unbindFromService(){
-        LocalBroadcastManager.getInstance(mContext).unregisterReceiver(this);
-        if(mIsBound){
-            mContext.unbindService(this);
-            mIsBound = false;
-        }
     }
 
     @Override
@@ -94,43 +69,59 @@ public class SharkServiceController
     public void onServiceDisconnected(ComponentName name) {
         mIsBound = false;
         mSharkService = null;
-        stopService();
-    }
-
-    private void registerReceiver(){
-        IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction(WifiDirectKPNotifier.NEW_INTEREST_ACTION);
-        LocalBroadcastManager.getInstance(mContext).registerReceiver(
-                this, intentFilter);
     }
 
     @Override
-    public void onReceive(Context context, Intent intent) {
-        String action = intent.getAction();
+    public void onNewInterest(ASIPInterest interest) {
+        WifiDirectPeer newPeer = new WifiDirectPeer(interest.getSender(), interest);
 
-        if(WifiDirectKPNotifier.NEW_INTEREST_ACTION.equals(action)) {
-
-            String stringInterest = intent.getStringExtra("interest");
-            ASIPInterest interest = null;
-            try {
-                interest = ASIPSerializer.deserializeASIPInterest(stringInterest);
-            } catch (SharkKBException e) {
-                e.printStackTrace();
-            }
-
-            WifiDirectPeer newPeer = new WifiDirectPeer(interest.getSender(), interest);
-
-            if (mPeers.contains(newPeer)) {
-                WifiDirectPeer peer = mPeers.get(mPeers.indexOf(newPeer));
-                if (peer.getLastUpdated() < newPeer.getLastUpdated()) {
-                    mPeers.remove(peer);
-                    mPeers.add(newPeer);
-                }
-            } else {
+        if (mPeers.contains(newPeer)) {
+            WifiDirectPeer peer = mPeers.get(mPeers.indexOf(newPeer));
+            if (peer.getLastUpdated() < newPeer.getLastUpdated()) {
+                mPeers.remove(peer);
                 mPeers.add(newPeer);
             }
+        } else {
+            mPeers.add(newPeer);
         }
     }
+
+    @Override
+    public void onNewKnowledge(ASIPKnowledge knowledge) {
+
+    }
+
+    public void startRouting() {
+        mContext.startService(new Intent(mContext, LocationService.class));
+    }
+
+    public void stopRouting() {
+        mContext.stopService(new Intent(mContext, LocationService.class));
+    }
+
+    public void stopShark(){
+        mContext.stopService(mIntent);
+    }
+
+    public void initShark(){
+        if(!mIsBound){
+            mIsBound = mContext.bindService(mIntent, this, Context.BIND_AUTO_CREATE);
+        }
+    }
+
+    public void setOffer(String name, String interest){
+        mName = name;
+        mInterest = interest;
+    }
+
+    public void unbindFromService(){
+        if(mIsBound){
+            mContext.unbindService(this);
+            mIsBound = false;
+        }
+    }
+
+
 
     private boolean isServiceRunning() {
         ActivityManager manager = (ActivityManager) mContext.getSystemService(Context.ACTIVITY_SERVICE);
@@ -153,5 +144,6 @@ public class SharkServiceController
     public void sendBroadcast(String text){
         mSharkService.sendBroadcast(text);
     }
+
 
 }

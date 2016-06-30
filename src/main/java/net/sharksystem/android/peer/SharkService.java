@@ -7,12 +7,15 @@ import android.net.wifi.WifiManager;
 import android.os.Binder;
 import android.os.IBinder;
 
+import net.sharkfw.asip.ASIPInterest;
+import net.sharkfw.asip.ASIPKnowledge;
+import net.sharkfw.asip.engine.ASIPConnection;
 import net.sharkfw.kep.SharkProtocolNotSupportedException;
 import net.sharkfw.knowledgeBase.inmemory.InMemoSharkKB;
+import net.sharkfw.kp.KPNotifier;
 import net.sharkfw.peer.KnowledgePort;
 import net.sharkfw.system.L;
 import net.sharksystem.android.protocols.wifidirect.RadarKP;
-import net.sharksystem.android.protocols.wifidirect.WifiDirectKPNotifier;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -20,7 +23,7 @@ import java.util.ArrayList;
 /**
  * Created by j4rvis on 12.04.16.
  */
-public class SharkService extends Service {
+public class SharkService extends Service implements KPNotifier {
 
     public class LocalBinder extends Binder {
         public SharkService getInstance() {
@@ -36,31 +39,71 @@ public class SharkService extends Service {
 
     private AndroidSharkEngine _engine;
     private ArrayList<KnowledgePort> _knowledgePorts;
-    private WifiDirectKPNotifier _kpNotifier;
 
     private String mNameToOffer;
     private String mInterestToOffer;
+
+    private KPListener mListener;
 
 
     @Override
     public void onCreate() {
         _engine = new AndroidSharkEngine(this);
         _knowledgePorts = new ArrayList<>();
-        _kpNotifier = new WifiDirectKPNotifier(this);
         L.d("Service created", this);
+
 //        testing();
     }
 
-    public void addKP(KnowledgePort kp){
-        if(!_knowledgePorts.contains(kp))
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        // If we get killed, after returning from here, restart
+        return START_STICKY;
+    }
+
+    @Override
+    public void onDestroy() {
+        L.d("Service destroyed", this);
+
+        stopEngine();
+        stopSelf();
+    }
+
+    @Override
+    public IBinder onBind(Intent intent) {
+        return _binder;
+    }
+
+    @Override
+    public void notifyInterestReceived(ASIPInterest asipInterest, ASIPConnection asipConnection) {
+        if (mListener != null) {
+            //App should be running...
+            mListener.onNewInterest(asipInterest);
+        } else {
+            //otherwise maybe send android notification?
+        }
+    }
+
+    @Override
+    public void notifyKnowledgeReceived(ASIPKnowledge asipKnowledge, ASIPConnection asipConnection) {
+        if (mListener != null) {
+            //App should be running...
+            mListener.onNewKnowledge(asipKnowledge);
+        } else {
+            //otherwise maybe send android notification?
+        }
+    }
+
+    public void addKP(KnowledgePort kp) {
+        if (!_knowledgePorts.contains(kp))
             _knowledgePorts.add(kp);
     }
 
-    public void startEngine(){
+    public void startEngine() {
         L.d("Starting", this);
-        if(!_isEngineStarted){
-            if(_knowledgePorts.isEmpty())
-                addKP(new RadarKP(_engine, InMemoSharkKB.createInMemoASIPInterest(), _kpNotifier));
+        if (!_isEngineStarted) {
+            if (_knowledgePorts.isEmpty())
+                addKP(new RadarKP(_engine, InMemoSharkKB.createInMemoASIPInterest(), this));
             try {
 //                _engine.
                 _engine.offerInterest(mInterestToOffer, mNameToOffer);
@@ -74,8 +117,8 @@ public class SharkService extends Service {
         }
     }
 
-    public void stopEngine(){
-        if(_isEngineStarted){
+    public void stopEngine() {
+        if (_isEngineStarted) {
             try {
                 L.d("Stop Wifi", this);
                 _engine.stopWifiDirect();
@@ -86,36 +129,22 @@ public class SharkService extends Service {
         }
     }
 
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        // If we get killed, after returning from here, restart
-        return START_STICKY;
-    }
-
-    @Override
-    public void onDestroy() {
-        L.d("Service destroyed", this);
-        stopEngine();
-        stopSelf();
-    }
-
-    @Override
-    public IBinder onBind(Intent intent) {
-        return _binder;
-    }
-
-//    public void sendBroadcast(String text) {
-//        _engine.sendBroadcast(text);
-//    }
-
-    public void sendBroadcast(String text){
+    public void sendBroadcast(String text) {
         _engine.sendBroadcast(text);
     }
 
-    public void testing(){
+    public void setNameToOffer(String mNameToOffer) {
+        this.mNameToOffer = mNameToOffer;
+    }
+
+    public void setInterestToOffer(String mInterestToOffer) {
+        this.mInterestToOffer = mInterestToOffer;
+    }
+
+    public void testing() {
 
         _wifiManager = (WifiManager) this.getSystemService(Context.WIFI_SERVICE);
-        if(_wifiManager.isWifiEnabled())
+        if (_wifiManager.isWifiEnabled())
             _wifiManager.setWifiEnabled(false);
         _wifiManager.setWifiEnabled(true);
 
@@ -126,11 +155,5 @@ public class SharkService extends Service {
         }
     }
 
-    public void setNameToOffer(String mNameToOffer) {
-        this.mNameToOffer = mNameToOffer;
-    }
 
-    public void setInterestToOffer(String mInterestToOffer) {
-        this.mInterestToOffer = mInterestToOffer;
-    }
 }
