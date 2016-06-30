@@ -52,6 +52,8 @@ public class SharkServiceController implements ServiceConnection, KPListener {
         SharkService.LocalBinder localBinder = (SharkService.LocalBinder) service;
         mSharkService = localBinder.getInstance();
 
+        mSharkService.addKPListener(this);
+
         mSharkService.setInterestToOffer(mInterest);
         mSharkService.setNameToOffer(mName);
 
@@ -63,6 +65,8 @@ public class SharkServiceController implements ServiceConnection, KPListener {
     public void onServiceDisconnected(ComponentName name) {
         mIsBound = false;
         mSharkService = null;
+
+        mSharkService.removeKPListener(this);
     }
 
     @Override
@@ -104,11 +108,19 @@ public class SharkServiceController implements ServiceConnection, KPListener {
     }
 
     public void startRouting() {
-        // TODO
+        if (mSharkService != null) {
+            mSharkService.startRouting();
+        } else {
+            // ?
+        }
     }
 
     public void stopRouting() {
-        // TODO
+        if (mSharkService != null) {
+            mSharkService.stopRouting();
+        } else {
+            // ?
+        }
     }
 
     public void setOffer(String name, String interest){
