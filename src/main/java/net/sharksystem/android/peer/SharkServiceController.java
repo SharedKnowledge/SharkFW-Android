@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.IBinder;
+import android.util.Log;
 
 import net.sharkfw.asip.ASIPInterest;
 import net.sharkfw.asip.ASIPKnowledge;
@@ -46,6 +47,7 @@ public class SharkServiceController implements ServiceConnection, KPListener {
 
     @Override
     public void onServiceConnected(ComponentName name, IBinder service) {
+        Log.e("CONTROLLER", "Connected to service");
         mIsBound = true;
         SharkService.LocalBinder localBinder = (SharkService.LocalBinder) service;
         mSharkService = localBinder.getInstance();
@@ -85,6 +87,7 @@ public class SharkServiceController implements ServiceConnection, KPListener {
 
     public void startShark(){
         if (!isSharkRunning()) {
+            Log.e("CONTROLLER", "Service not running, starting it");
             mContext.startService(mSharkIntent);
         }
         if(!mIsBound){

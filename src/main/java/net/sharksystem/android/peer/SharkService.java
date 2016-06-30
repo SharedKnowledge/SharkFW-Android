@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.net.wifi.WifiManager;
 import android.os.Binder;
 import android.os.IBinder;
+import android.util.Log;
 
 import net.sharkfw.asip.ASIPInterest;
 import net.sharkfw.asip.ASIPKnowledge;
@@ -52,7 +53,7 @@ public class SharkService extends Service implements KPNotifier {
         _engine = new AndroidSharkEngine(this);
         _knowledgePorts = new ArrayList<>();
         mListeners = new ArrayList<>();
-        L.d("Service created", this);
+        Log.e("SERVICE", "Service created");
 
 //        testing();
     }
@@ -60,12 +61,13 @@ public class SharkService extends Service implements KPNotifier {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         // If we get killed, after returning from here, restart
+        Log.e("SERVICE", "Service started");
         return START_STICKY;
     }
 
     @Override
     public void onDestroy() {
-        L.d("Service destroyed", this);
+        Log.e("SERVICE", "Service destroyed");
 
         stopEngine();
     }
