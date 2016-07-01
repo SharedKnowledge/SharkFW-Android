@@ -2,6 +2,7 @@ package net.sharksystem.android.peer;
 
 import android.app.Activity;
 import android.content.Context;
+import android.text.TextUtils;
 
 import net.sharkfw.asip.ASIPKnowledge;
 import net.sharkfw.asip.ASIPSpace;
@@ -110,7 +111,7 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine {
 
     public void offerInterest(String topic, String name){
 
-        if(topic.isEmpty())
+        if(TextUtils.isEmpty(topic))
            topic = "Dummy Interesse";
 
         STSet set = InMemoSharkKB.createInMemoSTSet();

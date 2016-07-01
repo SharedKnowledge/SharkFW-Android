@@ -104,6 +104,7 @@ public class SharkServiceController implements ServiceConnection, KPListener {
         if (mIsBound) {
             mContext.unbindService(this);
             mIsBound = false;
+            mSharkService = null;
         }
     }
 

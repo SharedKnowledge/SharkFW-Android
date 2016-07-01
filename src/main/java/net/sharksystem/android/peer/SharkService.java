@@ -5,10 +5,12 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.net.wifi.WifiManager;
 import android.os.Binder;
+import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
 
@@ -22,11 +24,11 @@ import net.sharkfw.peer.KnowledgePort;
 import net.sharkfw.system.L;
 import net.sharksystem.android.protocols.routing.LocationReceiver;
 import net.sharksystem.android.protocols.routing.MovingRouterLocationListener;
+import net.sharksystem.android.protocols.routing.RouterKP;
 import net.sharksystem.android.protocols.wifidirect.RadarKP;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Calendar;
 
 /**
  * Created by j4rvis on 12.04.16.
@@ -39,10 +41,15 @@ public class SharkService extends Service implements KPNotifier {
         }
     }
 
+    private final String sharkKey = "net.sharksystem.android";
+    private final String isRoutingEnabledKey = sharkKey + ".isRoutingEnabled";
+    private final String isEngineRunningKey = sharkKey + ".isEngineRunning";
+
     private IBinder _binder = new LocalBinder();
     private boolean _isEngineStarted = false;
 
     private AndroidSharkEngine _engine;
+    private RouterKP mRouterKP;
     private ArrayList<KnowledgePort> _knowledgePorts;
 
     private String mNameToOffer;
@@ -55,6 +62,10 @@ public class SharkService extends Service implements KPNotifier {
     private LocationListener mLocationListener;
     private PendingIntent mLocationIntent;
 
+    private Runnable mRunnable;
+    private Handler mHandler;
+
+    private SharedPreferences mPrefs;
 
     @Override
     public void onCreate() {
@@ -66,8 +77,19 @@ public class SharkService extends Service implements KPNotifier {
         Intent intentToFire = new Intent(this, LocationReceiver.class);
         mLocationIntent = PendingIntent.getBroadcast(this, 0, intentToFire, PendingIntent.FLAG_CANCEL_CURRENT);
 
-        mLocationManager = (LocationManager) getApplicationContext().getSystemService(Context.LOCATION_SERVICE);
-        mLocationListener = new MovingRouterLocationListener(LocationManager.NETWORK_PROVIDER, this);
+//        mLocationManager = (LocationManager) getApplicationContext().getSystemService(Context.LOCATION_SERVICE);
+//        mLocationListener = new MovingRouterLocationListener(LocationManager.NETWORK_PROVIDER, this);
+
+        mPrefs = getSharedPreferences(sharkKey, Context.MODE_PRIVATE);
+
+        mHandler = new Handler();
+        mRunnable = new Runnable() {
+            @Override
+            public void run() {
+                Log.e("SERVICE", "Checking messages...");
+                mHandler.postDelayed(mRunnable, 1000);
+            }
+        };
 
         Log.e("SERVICE", "Service created");
 
@@ -76,8 +98,18 @@ public class SharkService extends Service implements KPNotifier {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        // If we get killed, after returning from here, restart
-        Log.e("SERVICE", "Service started");
+        if (intent != null) {
+            Log.e("SERVICE", "Service started");
+        } else {
+            Log.e("SERVICE", "Service RE-started");
+            if (mPrefs.getBoolean(isEngineRunningKey, false)) {
+                startEngine();
+            }
+            if (mPrefs.getBoolean(isRoutingEnabledKey, false)) {
+                startRouting();
+            }
+        }
+
         return START_STICKY;
     }
 
@@ -121,6 +153,9 @@ public class SharkService extends Service implements KPNotifier {
         Log.e("ROUTING", "Routing started");
 
         mAlarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), 2 * 60 * 1000, mLocationIntent);
+        mHandler.postDelayed(mRunnable, 2000);
+
+        mPrefs.edit().putBoolean(isRoutingEnabledKey, true).apply();
 
         //mLocationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 10 * 1000, 0, mLocationListener);
     }
@@ -130,6 +165,10 @@ public class SharkService extends Service implements KPNotifier {
 
         mAlarmManager.cancel(mLocationIntent);
         LocationReceiver.stopLocationListener();
+        mHandler.removeCallbacks(mRunnable);
+
+        mPrefs.edit().putBoolean(isRoutingEnabledKey, false).apply();
+
 
         //mLocationManager.removeUpdates(mLocationListener);
     }
@@ -161,6 +200,9 @@ public class SharkService extends Service implements KPNotifier {
                 e.printStackTrace();
             }
             _isEngineStarted = true;
+
+            mPrefs.edit().putBoolean(isEngineRunningKey, true).apply();
+
         }
     }
 
@@ -173,6 +215,9 @@ public class SharkService extends Service implements KPNotifier {
                 e.printStackTrace();
             }
             _isEngineStarted = false;
+
+            mPrefs.edit().putBoolean(isEngineRunningKey, false).apply();
+
         }
     }
 

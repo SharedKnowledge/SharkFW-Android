@@ -13,6 +13,7 @@ import net.sharkfw.knowledgeBase.Knowledge;
 import net.sharkfw.knowledgeBase.SharkCS;
 import net.sharkfw.knowledgeBase.SharkKBException;
 import net.sharkfw.knowledgeBase.SpatialSemanticTag;
+import net.sharkfw.knowledgeBase.TimeSemanticTag;
 import net.sharkfw.knowledgeBase.geom.SpatialAlgebra;
 import net.sharkfw.peer.KEPConnection;
 import net.sharkfw.peer.KnowledgePort;
@@ -51,13 +52,24 @@ public class RouterKP extends KnowledgePort {
     protected void doProcess(ASIPInMessage msg, ASIPConnection con) {
         super.doProcess(msg, con);
 
+        boolean persist = false;
+
         try {
             if (msg.getReceiverSpatial() != null && this.isInMovementProfile(msg.getReceiverSpatial())) {
+                persist = true;
+            }
+            else if (msg.getReceiverTime() != null && !this.isTimeSpanInPast(msg.getReceiverTime())) {
+                persist = true;
+            }
+
+            if (persist) {
                 try {
                     _messageContentProvider.persist(msg);
                 } catch (JSONException | SharkKBException | IOException e) {
                     e.printStackTrace();
-                }            }
+                }
+            }
+
         } catch (SharkKBException | ParseException e) {
             e.printStackTrace();
         }
@@ -78,5 +90,9 @@ public class RouterKP extends KnowledgePort {
             // TODO throw exception cause of no valid wkt?
             return false;
         }
+    }
+
+    private boolean isTimeSpanInPast(TimeSemanticTag time) {
+        return (time.getFrom() + time.getDuration()) < System.currentTimeMillis();
     }
 }
