@@ -1,4 +1,4 @@
-package net.sharksystem.android.protocols.routing.service;
+package net.sharksystem.android.protocols.routing;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -7,6 +7,7 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Gravity;
 import android.widget.Toast;
 
@@ -14,7 +15,6 @@ import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.GeometryFactory;
 
-import net.sharksystem.android.protocols.routing.Utils;
 import net.sharksystem.android.protocols.routing.db.CoordinateContentProvider;
 
 public class LocationReceiver extends BroadcastReceiver {
@@ -49,6 +49,7 @@ public class LocationReceiver extends BroadcastReceiver {
     // received request from the calling service
     @Override
     public void onReceive(final Context context, Intent intent) {
+        Log.e("LOCATION", "onReceive");
         _context = context;
         _locationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
         if (_locationManager.isProviderEnabled(_provider)) {
@@ -67,6 +68,7 @@ public class LocationReceiver extends BroadcastReceiver {
         _prevLocation = _currentLocation == null ? null : new Location(_currentLocation);
         _currentLocation = location;
 
+        Log.e("LOCATION", "new location");
         if (isLocationNew()) {
             Toast.makeText(_context, "new location received", Toast.LENGTH_SHORT).show();
             Coordinate coordinate = new Coordinate(_currentLocation.getLatitude(), _currentLocation.getLongitude());

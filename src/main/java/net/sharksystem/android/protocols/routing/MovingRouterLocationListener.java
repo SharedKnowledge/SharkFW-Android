@@ -1,9 +1,10 @@
-package net.sharksystem.android.protocols.routing.service;
+package net.sharksystem.android.protocols.routing;
 
 import android.content.Context;
 import android.location.Location;
 import android.location.LocationListener;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.Toast;
 
 import com.vividsolutions.jts.geom.Coordinate;
@@ -16,7 +17,6 @@ import com.vividsolutions.jts.io.ParseException;
 import com.vividsolutions.jts.io.WKTReader;
 
 import net.sharkfw.knowledgeBase.SharkKBException;
-import net.sharksystem.android.protocols.routing.Utils;
 import net.sharksystem.android.protocols.routing.db.CoordinateContentProvider;
 import net.sharksystem.android.protocols.routing.db.MessageContentProvider;
 import net.sharksystem.android.protocols.routing.db.MessageDTO;
@@ -44,6 +44,8 @@ public class MovingRouterLocationListener implements LocationListener {
     public void onLocationChanged(Location location)
     {
         _lastLocation.set(location);
+
+        Log.e("LOCATION", "new location received.");
 
         this.updateMovementProfile(location);
         this.checkMessages(location);

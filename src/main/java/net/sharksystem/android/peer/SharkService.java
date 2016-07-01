@@ -5,6 +5,8 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.net.wifi.WifiManager;
 import android.os.Binder;
 import android.os.IBinder;
@@ -18,7 +20,8 @@ import net.sharkfw.knowledgeBase.inmemory.InMemoSharkKB;
 import net.sharkfw.kp.KPNotifier;
 import net.sharkfw.peer.KnowledgePort;
 import net.sharkfw.system.L;
-import net.sharksystem.android.protocols.routing.service.LocationReceiver;
+import net.sharksystem.android.protocols.routing.LocationReceiver;
+import net.sharksystem.android.protocols.routing.MovingRouterLocationListener;
 import net.sharksystem.android.protocols.wifidirect.RadarKP;
 
 import java.io.IOException;
@@ -48,7 +51,9 @@ public class SharkService extends Service implements KPNotifier {
     private ArrayList<KPListener> mListeners;
 
     private AlarmManager mAlarmManager;
-    public PendingIntent mLocationIntent;
+    private LocationManager mLocationManager;
+    private LocationListener mLocationListener;
+    private PendingIntent mLocationIntent;
 
 
     @Override
@@ -60,6 +65,10 @@ public class SharkService extends Service implements KPNotifier {
         mAlarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
         Intent intentToFire = new Intent(this, LocationReceiver.class);
         mLocationIntent = PendingIntent.getBroadcast(this, 0, intentToFire, PendingIntent.FLAG_CANCEL_CURRENT);
+
+        mLocationManager = (LocationManager) getApplicationContext().getSystemService(Context.LOCATION_SERVICE);
+        mLocationListener = new MovingRouterLocationListener(LocationManager.NETWORK_PROVIDER, this);
+
         Log.e("SERVICE", "Service created");
 
 //        testing();
@@ -109,15 +118,20 @@ public class SharkService extends Service implements KPNotifier {
     }
 
     public void startRouting() {
-        long interval = 60 * 1000;
-        int alarmType = AlarmManager.RTC_WAKEUP;
-        long timetoRefresh = Calendar.getInstance().getTimeInMillis();
-        mAlarmManager.setInexactRepeating(alarmType, timetoRefresh, interval, mLocationIntent);
+        Log.e("ROUTING", "Routing started");
+
+        mAlarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), 2 * 60 * 1000, mLocationIntent);
+
+        //mLocationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 10 * 1000, 0, mLocationListener);
     }
 
     public void stopRouting() {
+        Log.e("ROUTING", "Routing stopped");
+
         mAlarmManager.cancel(mLocationIntent);
         LocationReceiver.stopLocationListener();
+
+        //mLocationManager.removeUpdates(mLocationListener);
     }
 
     public void addKPListener(KPListener listener) {
