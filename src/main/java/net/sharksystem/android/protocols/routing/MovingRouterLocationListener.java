@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.widget.Toast;
 
+import com.vividsolutions.jts.algorithm.ConvexHull;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.GeometryFactory;
@@ -18,6 +19,7 @@ import com.vividsolutions.jts.io.WKTReader;
 
 import net.sharkfw.knowledgeBase.SharkKBException;
 import net.sharksystem.android.protocols.routing.db.CoordinateContentProvider;
+import net.sharksystem.android.protocols.routing.db.CoordinateDTO;
 import net.sharksystem.android.protocols.routing.db.MessageContentProvider;
 import net.sharksystem.android.protocols.routing.db.MessageDTO;
 
@@ -69,9 +71,20 @@ public class MovingRouterLocationListener implements LocationListener {
     private void updateMovementProfile(Location location) {
         Coordinate coordinate = new Coordinate(location.getLatitude(), location.getLongitude());
         Geometry geometry = new GeometryFactory().createPoint(coordinate);
-        if (!Utils.isInMovementProfile(geometry, _context)) {
+        if (!this.intersectsConvexHull(geometry)) {
             _coordinateContentProvider.persist(coordinate);
         }
+    }
+
+    private boolean intersectsConvexHull(Geometry geometry) {
+        List<CoordinateDTO> coordinateDTOs = _coordinateContentProvider.getAllCoordinates();
+        Coordinate[] coordinates = new Coordinate[coordinateDTOs.size()];
+        for (int i = 0; i < coordinateDTOs.size(); i++) {
+            coordinates[i] = coordinateDTOs.get(i).toCoordinate();
+        }
+        Geometry convexHull = new ConvexHull(coordinates, new GeometryFactory()).getConvexHull();
+
+        return convexHull.intersects(geometry);
     }
 
     private void checkMessages(Location location) {
@@ -115,15 +128,15 @@ public class MovingRouterLocationListener implements LocationListener {
     }
 
     private void decreaseChecks(MessageDTO message) throws JSONException, SharkKBException {
-        long checks = message.getChecks();
-        if (checks > 1) {
-            checks--;
-            message.setChecks(checks);
-            _messageContentProvider.update(message);
-        } else {
-            // TODO real broadcast
-            Toast.makeText(_context, "Message broadcast because time expired", Toast.LENGTH_SHORT).show();
-            _messageContentProvider.delete(message);
-        }
+//        long checks = message.getChecks();
+//        if (checks > 1) {
+//            checks--;
+//            message.setChecks(checks);
+//            _messageContentProvider.update(message);
+//        } else {
+//            // TODO real broadcast
+//            Toast.makeText(_context, "Message broadcast because time expired", Toast.LENGTH_SHORT).show();
+//            _messageContentProvider.delete(message);
+//        }
     }
 }

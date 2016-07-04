@@ -45,6 +45,46 @@ public class SharkServiceController implements ServiceConnection, KPListener {
         mSharkIntent.putExtra("interest", mInterest);
     }
 
+    public void startShark(){
+        if (!isSharkRunning()) {
+            Log.e("CONTROLLER", "Service not running, starting it");
+            mContext.startService(mSharkIntent);
+        }
+        if(!mIsBound){
+            mIsBound = mContext.bindService(mSharkIntent, this, Context.BIND_AUTO_CREATE);
+        }
+    }
+
+    public void stopShark(){
+        mContext.stopService(mSharkIntent);
+        if (mIsBound) {
+            mContext.unbindService(this);
+            mIsBound = false;
+            mSharkService = null;
+        }
+    }
+
+    public void startRouting() {
+        if (mSharkService != null) {
+            mSharkService.startRouting();
+        } else {
+            // ?
+        }
+    }
+
+    public void stopRouting() {
+        if (mSharkService != null) {
+            mSharkService.stopRouting();
+        } else {
+            // ?
+        }
+    }
+
+    public void setOffer(String name, String interest){
+        mName = name;
+        mInterest = interest;
+    }
+
     @Override
     public void onServiceConnected(ComponentName name, IBinder service) {
         Log.e("CONTROLLER", "Connected to service");
@@ -87,56 +127,6 @@ public class SharkServiceController implements ServiceConnection, KPListener {
     @Override
     public void onNewKnowledge(ASIPKnowledge knowledge) {
 
-    }
-
-    public void startShark(){
-        if (!isSharkRunning()) {
-            Log.e("CONTROLLER", "Service not running, starting it");
-            mContext.startService(mSharkIntent);
-        }
-        if(!mIsBound){
-            mIsBound = mContext.bindService(mSharkIntent, this, Context.BIND_AUTO_CREATE);
-        }
-    }
-
-    public void stopShark(){
-        mContext.stopService(mSharkIntent);
-        if (mIsBound) {
-            mContext.unbindService(this);
-            mIsBound = false;
-            mSharkService = null;
-        }
-    }
-
-    public void startRouting() {
-        if (mSharkService != null) {
-            mSharkService.startRouting();
-        } else {
-            // ?
-        }
-    }
-
-    public void stopRouting() {
-        if (mSharkService != null) {
-            mSharkService.stopRouting();
-        } else {
-            // ?
-        }
-    }
-
-    public void setOffer(String name, String interest){
-        mName = name;
-        mInterest = interest;
-    }
-
-    private boolean isServiceRunning() {
-        ActivityManager manager = (ActivityManager) mContext.getSystemService(Context.ACTIVITY_SERVICE);
-        for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
-            if (SharkService.class.getName().equals(service.service.getClassName())) {
-                return true;
-            }
-        }
-        return false;
     }
 
     public CopyOnWriteArrayList<WifiDirectPeer> getPeers(){

@@ -1,16 +1,11 @@
 package net.sharksystem.android.peer;
 
-import android.app.AlarmManager;
-import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.location.LocationListener;
-import android.location.LocationManager;
 import android.net.wifi.WifiManager;
 import android.os.Binder;
-import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
 
@@ -22,8 +17,6 @@ import net.sharkfw.knowledgeBase.inmemory.InMemoSharkKB;
 import net.sharkfw.kp.KPNotifier;
 import net.sharkfw.peer.KnowledgePort;
 import net.sharkfw.system.L;
-import net.sharksystem.android.protocols.routing.LocationReceiver;
-import net.sharksystem.android.protocols.routing.MovingRouterLocationListener;
 import net.sharksystem.android.protocols.routing.RouterKP;
 import net.sharksystem.android.protocols.wifidirect.RadarKP;
 
@@ -41,55 +34,32 @@ public class SharkService extends Service implements KPNotifier {
         }
     }
 
-    private final String sharkKey = "net.sharksystem.android";
-    private final String isRoutingEnabledKey = sharkKey + ".isRoutingEnabled";
-    private final String isEngineRunningKey = sharkKey + ".isEngineRunning";
+    public static final String SHARK_KEY = "net.sharksystem.android";
+    public static final String IS_ROUTING_ENABLED_KEY = SHARK_KEY + ".isRoutingEnabled";
+    public static final String IS_ENGINE_RUNNING_KEY = SHARK_KEY + ".isEngineRunning";
 
     private IBinder _binder = new LocalBinder();
-    private boolean _isEngineStarted = false;
+    private boolean mIsEngingeStarted = false;
 
-    private AndroidSharkEngine _engine;
+    private AndroidSharkEngine mEngine;
     private RouterKP mRouterKP;
-    private ArrayList<KnowledgePort> _knowledgePorts;
+    private ArrayList<KnowledgePort> mKnowledgePorts;
 
     private String mNameToOffer;
     private String mInterestToOffer;
 
     private ArrayList<KPListener> mListeners;
 
-    private AlarmManager mAlarmManager;
-    private LocationManager mLocationManager;
-    private LocationListener mLocationListener;
-    private PendingIntent mLocationIntent;
-
-    private Runnable mRunnable;
-    private Handler mHandler;
-
     private SharedPreferences mPrefs;
 
     @Override
     public void onCreate() {
-        _engine = new AndroidSharkEngine(this);
-        _knowledgePorts = new ArrayList<>();
+        mEngine = new AndroidSharkEngine(this);
+        mKnowledgePorts = new ArrayList<>();
         mListeners = new ArrayList<>();
 
-        mAlarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-        Intent intentToFire = new Intent(this, LocationReceiver.class);
-        mLocationIntent = PendingIntent.getBroadcast(this, 0, intentToFire, PendingIntent.FLAG_CANCEL_CURRENT);
-
-//        mLocationManager = (LocationManager) getApplicationContext().getSystemService(Context.LOCATION_SERVICE);
-//        mLocationListener = new MovingRouterLocationListener(LocationManager.NETWORK_PROVIDER, this);
-
-        mPrefs = getSharedPreferences(sharkKey, Context.MODE_PRIVATE);
-
-        mHandler = new Handler();
-        mRunnable = new Runnable() {
-            @Override
-            public void run() {
-                Log.e("SERVICE", "Checking messages...");
-                mHandler.postDelayed(mRunnable, 1000);
-            }
-        };
+        mPrefs = getSharedPreferences(SHARK_KEY, Context.MODE_PRIVATE);
+        mRouterKP = new RouterKP(mEngine, this);
 
         Log.e("SERVICE", "Service created");
 
@@ -102,15 +72,65 @@ public class SharkService extends Service implements KPNotifier {
             Log.e("SERVICE", "Service started");
         } else {
             Log.e("SERVICE", "Service RE-started");
-            if (mPrefs.getBoolean(isEngineRunningKey, false)) {
+            if (mPrefs.getBoolean(IS_ENGINE_RUNNING_KEY, false)) {
                 startEngine();
             }
-            if (mPrefs.getBoolean(isRoutingEnabledKey, false)) {
+            if (mPrefs.getBoolean(IS_ROUTING_ENABLED_KEY, false)) {
                 startRouting();
             }
         }
 
         return START_STICKY;
+    }
+
+    public void startRouting() {
+        Log.e("ROUTING", "Routing started");
+
+        mRouterKP.startRouting();
+
+        mPrefs.edit().putBoolean(IS_ROUTING_ENABLED_KEY, true).apply();
+    }
+
+    public void stopRouting() {
+        Log.e("ROUTING", "Routing stopped");
+
+        mRouterKP.stopRouting();
+
+        mPrefs.edit().putBoolean(IS_ROUTING_ENABLED_KEY, false).apply();
+    }
+
+    public void startEngine() {
+        L.d("Starting", this);
+        if (!mIsEngingeStarted) {
+            if (mKnowledgePorts.isEmpty()) {
+                addKP(new RadarKP(mEngine, InMemoSharkKB.createInMemoASIPInterest(), this));
+            }
+
+            try {
+                mEngine.offerInterest(mInterestToOffer, mNameToOffer);
+                mEngine.startWifiDirect();
+            } catch (IOException | SharkProtocolNotSupportedException e) {
+                e.printStackTrace();
+            }
+            mIsEngingeStarted = true;
+
+            mPrefs.edit().putBoolean(IS_ENGINE_RUNNING_KEY, true).apply();
+        }
+    }
+
+    public void stopEngine() {
+        if (mIsEngingeStarted) {
+            try {
+                L.d("Stop Wifi", this);
+                mEngine.stopWifiDirect();
+            } catch (SharkProtocolNotSupportedException e) {
+                e.printStackTrace();
+            }
+            mIsEngingeStarted = false;
+
+            mPrefs.edit().putBoolean(IS_ENGINE_RUNNING_KEY, false).apply();
+
+        }
     }
 
     @Override
@@ -149,30 +169,6 @@ public class SharkService extends Service implements KPNotifier {
         }
     }
 
-    public void startRouting() {
-        Log.e("ROUTING", "Routing started");
-
-        mAlarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), 2 * 60 * 1000, mLocationIntent);
-        mHandler.postDelayed(mRunnable, 2000);
-
-        mPrefs.edit().putBoolean(isRoutingEnabledKey, true).apply();
-
-        //mLocationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 10 * 1000, 0, mLocationListener);
-    }
-
-    public void stopRouting() {
-        Log.e("ROUTING", "Routing stopped");
-
-        mAlarmManager.cancel(mLocationIntent);
-        LocationReceiver.stopLocationListener();
-        mHandler.removeCallbacks(mRunnable);
-
-        mPrefs.edit().putBoolean(isRoutingEnabledKey, false).apply();
-
-
-        //mLocationManager.removeUpdates(mLocationListener);
-    }
-
     public void addKPListener(KPListener listener) {
         mListeners.add(listener);
     }
@@ -182,47 +178,12 @@ public class SharkService extends Service implements KPNotifier {
     }
 
     public void addKP(KnowledgePort kp) {
-        if (!_knowledgePorts.contains(kp))
-            _knowledgePorts.add(kp);
-    }
-
-    public void startEngine() {
-        L.d("Starting", this);
-        if (!_isEngineStarted) {
-            if (_knowledgePorts.isEmpty())
-                addKP(new RadarKP(_engine, InMemoSharkKB.createInMemoASIPInterest(), this));
-            try {
-                _engine.offerInterest(mInterestToOffer, mNameToOffer);
-                _engine.startWifiDirect();
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (SharkProtocolNotSupportedException e) {
-                e.printStackTrace();
-            }
-            _isEngineStarted = true;
-
-            mPrefs.edit().putBoolean(isEngineRunningKey, true).apply();
-
-        }
-    }
-
-    public void stopEngine() {
-        if (_isEngineStarted) {
-            try {
-                L.d("Stop Wifi", this);
-                _engine.stopWifiDirect();
-            } catch (SharkProtocolNotSupportedException e) {
-                e.printStackTrace();
-            }
-            _isEngineStarted = false;
-
-            mPrefs.edit().putBoolean(isEngineRunningKey, false).apply();
-
-        }
+        if (!mKnowledgePorts.contains(kp))
+            mKnowledgePorts.add(kp);
     }
 
     public void sendBroadcast(String text) {
-        _engine.sendBroadcast(text);
+        mEngine.sendBroadcast(text);
     }
 
     public void setNameToOffer(String mNameToOffer) {

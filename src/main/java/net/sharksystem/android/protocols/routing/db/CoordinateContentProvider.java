@@ -5,7 +5,10 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
+import com.vividsolutions.jts.algorithm.ConvexHull;
 import com.vividsolutions.jts.geom.Coordinate;
+import com.vividsolutions.jts.geom.Geometry;
+import com.vividsolutions.jts.geom.GeometryFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,7 +16,7 @@ import java.util.List;
 public class CoordinateContentProvider {
 
     private MySQLiteHelper dbHelper;
-    private String[] allColumns = { MySQLiteHelper.COLUMN_ID, MySQLiteHelper.COLUMN_LATITUDE, MySQLiteHelper.COLUMN_LONGITUDE };
+    private String[] allColumns = { MySQLiteHelper.COLUMN_ID, MySQLiteHelper.COLUMN_LATITUDE, MySQLiteHelper.COLUMN_LONGITUDE, MySQLiteHelper.COLUMN_INSERTION_DATE };
 
     public CoordinateContentProvider(Context context) {
         dbHelper = MySQLiteHelper.getInstance(context);
@@ -25,6 +28,7 @@ public class CoordinateContentProvider {
         ContentValues values = new ContentValues();
         values.put(MySQLiteHelper.COLUMN_LATITUDE, coordinate.x);
         values.put(MySQLiteHelper.COLUMN_LONGITUDE, coordinate.y);
+        values.put(MySQLiteHelper.COLUMN_INSERTION_DATE, System.currentTimeMillis());
 
         long insertId = database.insert(MySQLiteHelper.TABLE_COORDINATES, null, values);
         Cursor cursor = database.query(MySQLiteHelper.TABLE_COORDINATES, allColumns, MySQLiteHelper.COLUMN_ID + " = " + insertId, null, null, null, null);
@@ -48,7 +52,7 @@ public class CoordinateContentProvider {
         SQLiteDatabase database = dbHelper.getReadableDatabase();
         List<CoordinateDTO> coordinateDTOs = new ArrayList<CoordinateDTO>();
 
-        Cursor cursor = database.query(MySQLiteHelper.TABLE_COORDINATES,  allColumns, null, null, null, null, null);
+        Cursor cursor = database.query(MySQLiteHelper.TABLE_COORDINATES, allColumns, null, null, null, null, null);
 
         cursor.moveToFirst();
         while (!cursor.isAfterLast()) {
@@ -62,11 +66,21 @@ public class CoordinateContentProvider {
         return coordinateDTOs;
     }
 
+    public Geometry getConvexHull() {
+        List<CoordinateDTO> coordinateDTOs = this.getAllCoordinates();
+        Coordinate[] coordinates = new Coordinate[coordinateDTOs.size()];
+        for (int i = 0; i < coordinateDTOs.size(); i++) {
+            coordinates[i] = coordinateDTOs.get(i).toCoordinate();
+        }
+        return new ConvexHull(coordinates, new GeometryFactory()).getConvexHull();
+    }
+
     private CoordinateDTO cursorToCoordinate(Cursor cursor) {
         CoordinateDTO coordinateDTO = new CoordinateDTO();
         coordinateDTO.setId(cursor.getLong(0));
         coordinateDTO.setLatitude(cursor.getFloat(1));
         coordinateDTO.setLongitude(cursor.getFloat(2));
+        coordinateDTO.setInsertionDate(cursor.getLong(3));
         return coordinateDTO;
     }
 }

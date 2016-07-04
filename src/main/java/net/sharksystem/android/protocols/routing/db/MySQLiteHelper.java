@@ -14,6 +14,7 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
     public static final String TABLE_COORDINATES = "coordinates";
     public static final String COLUMN_LATITUDE = "latitude";
     public static final String COLUMN_LONGITUDE = "longitude";
+    public static final String COLUMN_INSERTION_DATE = "insertion_date";
 
     public static final String TABLE_MESSAGES = "messages";
     public static final String COLUMN_VERSION = "version";
@@ -22,7 +23,6 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
     public static final String COLUMN_ENCRYPTED_SESSION_KEY = "encrypted_session_key";
     public static final String COLUMN_SIGNED = "signed";
     public static final String COLUMN_TTL = "ttl";
-    public static final String COLUMN_CHECKS = "checks";
     public static final String COLUMN_COMMAND = "command";
     public static final String COLUMN_SENDER = "sender";
     public static final String COLUMN_RECEIVERS = "receivers";
@@ -41,7 +41,8 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
             + TABLE_COORDINATES + "("
             + COLUMN_ID + " integer primary key autoincrement, "
             + COLUMN_LATITUDE + " float, "
-            + COLUMN_LONGITUDE + " float);";
+            + COLUMN_LONGITUDE + " float,"
+            + COLUMN_INSERTION_DATE + " signed bigint);";
 
     private static final String DATABASE_CREATE_MESSAGES =
             "create table "
@@ -53,7 +54,6 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
             + COLUMN_ENCRYPTED_SESSION_KEY + " text, "
             + COLUMN_SIGNED + " bool, "
             + COLUMN_TTL + " signed bigint, "
-            + COLUMN_CHECKS + " signed bigint, "
             + COLUMN_COMMAND + " integer, "
             + COLUMN_SENDER + " text, "
             + COLUMN_RECEIVERS + " text, "

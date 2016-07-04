@@ -7,6 +7,7 @@ public class CoordinateDTO {
     private long id;
     private float latitude;
     private float longitude;
+    private long insertionDate;
 
     public long getId() {
         return id;
@@ -30,6 +31,14 @@ public class CoordinateDTO {
 
     public void setLongitude(float longitude) {
         this.longitude = longitude;
+    }
+
+    public long getInsertionDate() {
+        return insertionDate;
+    }
+
+    public void setInsertionDate(long insertionDate) {
+        this.insertionDate = insertionDate;
     }
 
     public Coordinate toCoordinate() {

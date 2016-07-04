@@ -14,7 +14,6 @@ public class MessageDTO {
     private boolean signed;
     private String signature;
     private long ttl;
-    private long checks;
 
     private int command;
     private PeerSemanticTag sender;
@@ -86,14 +85,6 @@ public class MessageDTO {
 
     public void setTtl(long ttl) {
         this.ttl = ttl;
-    }
-
-    public long getChecks() {
-        return checks;
-    }
-
-    public void setChecks(long checks) {
-        this.checks = checks;
     }
 
     public int getCommand() {

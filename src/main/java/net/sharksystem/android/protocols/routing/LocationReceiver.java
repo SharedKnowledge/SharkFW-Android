@@ -8,23 +8,26 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.Gravity;
 import android.widget.Toast;
 
+import com.vividsolutions.jts.algorithm.ConvexHull;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.GeometryFactory;
 
 import net.sharksystem.android.protocols.routing.db.CoordinateContentProvider;
+import net.sharksystem.android.protocols.routing.db.CoordinateDTO;
+
+import java.util.List;
 
 public class LocationReceiver extends BroadcastReceiver {
 
     public static final int MIN_TIME_REQUEST = 5 * 1000;
+    private static Location mLastLocation;
     private static String _provider = LocationManager.NETWORK_PROVIDER;
-    private static Location _currentLocation;
-    private static Location _prevLocation;
-    private static Context _context;
-    private static LocationManager _locationManager;
+    private static Context mContext;
+    private static long mTimeToLive;
+    private static LocationManager mLocationManager;
 
     private static LocationListener _locationListener = new LocationListener() {
 
@@ -42,7 +45,8 @@ public class LocationReceiver extends BroadcastReceiver {
 
         @Override
         public void onLocationChanged(Location location) {
-            handleLocation(location);
+            mLastLocation = location;
+            updateMovementProfile(location);
         }
     };
 
@@ -50,53 +54,48 @@ public class LocationReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(final Context context, Intent intent) {
         Log.e("LOCATION", "onReceive");
-        _context = context;
-        _locationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
-        if (_locationManager.isProviderEnabled(_provider)) {
-            _locationManager.requestLocationUpdates(_provider, 0, 0, _locationListener);
+        mContext = context;
+        mTimeToLive = intent.getLongExtra(RouterKP.TAG_COORDINATE_TTL, RouterKP.DEFAULT_COORDINATE_TTL);
+        mLocationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
+        if (mLocationManager.isProviderEnabled(_provider)) {
+            mLocationManager.requestLocationUpdates(_provider, 0, 0, _locationListener);
         } else {
-            Toast t = Toast.makeText(context, "please turn on positioning stuff", Toast.LENGTH_LONG);
-            t.setGravity(Gravity.CENTER, 0, 0);
-            t.show();
-            Intent settingsIntent = new Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS);
-            settingsIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            _context.startActivity(settingsIntent);
+            Toast.makeText(context, "please turn on positioning stuff and give permissions", Toast.LENGTH_LONG).show();
         }
     }
 
-    private static void handleLocation(Location location) {
-        _prevLocation = _currentLocation == null ? null : new Location(_currentLocation);
-        _currentLocation = location;
-
+    private static void updateMovementProfile(Location location) {
         Log.e("LOCATION", "new location");
-        if (isLocationNew()) {
-            Toast.makeText(_context, "new location received", Toast.LENGTH_SHORT).show();
-            Coordinate coordinate = new Coordinate(_currentLocation.getLatitude(), _currentLocation.getLongitude());
-            Geometry geometry = new GeometryFactory().createPoint(coordinate);
-            CoordinateContentProvider _coordinateContentProvider = new CoordinateContentProvider(_context);
+        Coordinate coordinate = new Coordinate(location.getLatitude(), location.getLongitude());
+        Geometry geometry = new GeometryFactory().createPoint(coordinate);
+        CoordinateContentProvider contentProvider = new CoordinateContentProvider(mContext);
 
-            if (!Utils.isInMovementProfile(geometry, _context)) {
-                _coordinateContentProvider.persist(coordinate);
+        //check if new coordinate is out of current movement profile. If yes, add it
+        if (!contentProvider.getConvexHull().contains(geometry)) {
+            CoordinateDTO newCoordinate = contentProvider.persist(coordinate);
+        }
+        List<CoordinateDTO> coordinates = contentProvider.getAllCoordinates();
+        //check coordinates of movement profile for their expiration
+        for (CoordinateDTO coordinateDTO : coordinates) {
+            if (System.currentTimeMillis() > coordinateDTO.getInsertionDate() + mTimeToLive) {
+                contentProvider.deleteCoordinate(coordinateDTO);
             }
-
-            stopLocationListener();
         }
-    }
 
-    private static boolean isLocationNew() {
-        if (_currentLocation == null || _prevLocation == null || _currentLocation.getTime() == _prevLocation.getTime()) {
-            return false;
-        }
-        return true;
+        stopLocationListener();
     }
 
     public static void stopLocationListener() {
-        if (_locationManager != null) {
-            _locationManager.removeUpdates(_locationListener);
+        if (mLocationManager != null) {
+            mLocationManager.removeUpdates(_locationListener);
         }
 
-        if (_context != null) {
-            Toast.makeText(_context, "provider stopped", Toast.LENGTH_SHORT).show();
+        if (mContext != null) {
+            Toast.makeText(mContext, "provider stopped", Toast.LENGTH_SHORT).show();
         }
+    }
+
+    public static Location getLastLocation() {
+        return mLastLocation;
     }
 }

@@ -31,7 +31,6 @@ public class MessageContentProvider {
             MySQLiteHelper.COLUMN_SIGNED,
             //MySQLiteHelper.COLUMN_SIGNATURE,
             MySQLiteHelper.COLUMN_TTL,
-            MySQLiteHelper.COLUMN_CHECKS,
             MySQLiteHelper.COLUMN_COMMAND,
             MySQLiteHelper.COLUMN_SENDER,
             MySQLiteHelper.COLUMN_RECEIVERS,
@@ -67,7 +66,6 @@ public class MessageContentProvider {
         values.put(MySQLiteHelper.COLUMN_SIGNED, msg.isSigned());
         //values.put(MySQLiteHelper.SIGNATURE, msg.getSignature());
         values.put(MySQLiteHelper.COLUMN_TTL, msg.getTtl());
-        values.put(MySQLiteHelper.COLUMN_CHECKS, MAX_CHECKS);
         values.put(MySQLiteHelper.COLUMN_COMMAND, msg.getCommand());
         values.put(MySQLiteHelper.COLUMN_SENDER, msg.getSender() != null ? ASIPSerializer.serializeTag(msg.getSender()).toString() : "");
         values.put(MySQLiteHelper.COLUMN_RECEIVERS, msg.getReceivers() != null ? ASIPSerializer.serializeSTSet(msg.getReceivers()).toString() : "");
@@ -93,7 +91,6 @@ public class MessageContentProvider {
         values.put(MySQLiteHelper.COLUMN_SIGNED, msg.isSigned());
         //values.put(MySQLiteHelper.SIGNATURE, msg.getSignature());
         values.put(MySQLiteHelper.COLUMN_TTL, msg.getTtl());
-        values.put(MySQLiteHelper.COLUMN_CHECKS, msg.getChecks());
         values.put(MySQLiteHelper.COLUMN_COMMAND, msg.getCommand());
         values.put(MySQLiteHelper.COLUMN_SENDER, msg.getSender() != null ? ASIPSerializer.serializeTag(msg.getSender()).toString() : "");
         values.put(MySQLiteHelper.COLUMN_RECEIVERS, msg.getReceivers() != null ? ASIPSerializer.serializeSTSet(msg.getReceivers()).toString() : "");
@@ -143,14 +140,13 @@ public class MessageContentProvider {
         messageDTO.setSigned(cursor.getInt(5) > 0);
         //messageDTO.setSignature(cursor.getString(6));
         messageDTO.setTtl(cursor.getLong(6));
-        messageDTO.setChecks(cursor.getLong(7));
-        messageDTO.setCommand(cursor.getInt(8));
-        messageDTO.setSender(ASIPSerializer.deserializePeerTag(cursor.getString(9)));
-        //messageDTO.setReceivers(ASIPSerializer.deserializeSTSet(cursor.getString(10)));
-        messageDTO.setReceiverPeer(ASIPSerializer.deserializePeerTag(cursor.getString(11)));
-        messageDTO.setReceiverSpatial(ASIPSerializer.deserializeSpatialTag(cursor.getString(12)));
-        messageDTO.setReceiverTime(ASIPSerializer.deserializeTimeTag(cursor.getString(13)));
-        messageDTO.setContent(cursor.getString(14));
+        messageDTO.setCommand(cursor.getInt(7));
+        messageDTO.setSender(ASIPSerializer.deserializePeerTag(cursor.getString(8)));
+        //messageDTO.setReceivers(ASIPSerializer.deserializeSTSet(cursor.getString(9)));
+        messageDTO.setReceiverPeer(ASIPSerializer.deserializePeerTag(cursor.getString(10)));
+        messageDTO.setReceiverSpatial(ASIPSerializer.deserializeSpatialTag(cursor.getString(11)));
+        messageDTO.setReceiverTime(ASIPSerializer.deserializeTimeTag(cursor.getString(12)));
+        messageDTO.setContent(cursor.getString(13));
 
         //TODO content is just a string right now..can be interest or knowledge or raw though
         return messageDTO;
