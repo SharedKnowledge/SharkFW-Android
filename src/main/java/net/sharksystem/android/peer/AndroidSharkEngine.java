@@ -1,7 +1,14 @@
 package net.sharksystem.android.peer;
 
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Context;
+import android.net.ConnectivityManager;
+import android.net.LinkProperties;
+import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.net.NetworkRequest;
+import android.os.Build;
 import android.text.TextUtils;
 
 import net.sharkfw.asip.ASIPInterest;
@@ -11,15 +18,11 @@ import net.sharkfw.asip.SharkStub;
 import net.sharkfw.asip.engine.ASIPConnection;
 import net.sharkfw.asip.engine.ASIPOutMessage;
 import net.sharkfw.kep.SharkProtocolNotSupportedException;
-import net.sharkfw.knowledgeBase.PeerSTSet;
 import net.sharkfw.knowledgeBase.PeerSemanticTag;
 import net.sharkfw.knowledgeBase.STSet;
 import net.sharkfw.knowledgeBase.SemanticTag;
 import net.sharkfw.knowledgeBase.SharkKBException;
-import net.sharkfw.knowledgeBase.SpatialSTSet;
 import net.sharkfw.knowledgeBase.SpatialSemanticTag;
-import net.sharkfw.knowledgeBase.SystemPropertyHolder;
-import net.sharkfw.knowledgeBase.TimeSTSet;
 import net.sharkfw.knowledgeBase.TimeSemanticTag;
 import net.sharkfw.knowledgeBase.inmemory.InMemoSharkKB;
 import net.sharkfw.kp.KPNotifier;
@@ -27,20 +30,21 @@ import net.sharkfw.peer.J2SEAndroidSharkEngine;
 import net.sharkfw.protocols.RequestHandler;
 import net.sharkfw.protocols.Stub;
 import net.sharkfw.system.L;
-import net.sharkfw.system.SharkNotSupportedException;
 import net.sharksystem.android.protocols.nfc.NfcMessageStub;
-import net.sharksystem.android.protocols.wifidirect.WifiDirectPeer;
 import net.sharksystem.android.protocols.wifidirect.WifiDirectStreamStub;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class AndroidSharkEngine extends J2SEAndroidSharkEngine implements KPNotifier {
-    Context context;
+    Context mContext;
     WeakReference<Activity> activityRef;
     Stub currentStub;
     private ASIPSpace mSpace;
@@ -48,16 +52,92 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine implements KPNoti
 
     private HashMap<PeerSemanticTag, Long> mNearbyPeers = new HashMap<>();
 
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     public AndroidSharkEngine(Context context) {
         super();
         this.activateASIP();
-        this.context = context;
+        this.mContext = context;
+
+//        final ConnectivityManager connectivityManager = (ConnectivityManager) this.mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
+//
+//        NetworkRequest.Builder builder = new NetworkRequest.Builder();
+//
+//        builder.addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED);
+//        builder.addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR);
+//
+//        NetworkRequest networkRequest = builder.build();
+//        ConnectivityManager.NetworkCallback networkCallback =
+//                new ConnectivityManager.NetworkCallback() {
+//                    @Override
+//                    public void onAvailable(Network network) {
+//                        super.onAvailable(network);
+//                        LinkProperties prop = connectivityManager.getLinkProperties(network);
+//                        InetAddress addr = prop.getLinkAddresses().get(0).getAddress();
+//                        L.d("OnAvailable: " + addr.getHostAddress(), this);
+//                    }
+//                };
+//
+//        connectivityManager.requestNetwork(networkRequest, networkCallback);
+//        connectivityManager.registerNetworkCallback(networkRequest, networkCallback);
+    }
+
+    public AndroidSharkEngine(Context context, String ownerName, String topic){
+        this(context);
+
+        offerInterest(topic, ownerName);
+    }
+
+    private String[] getDeviceIPAddresses(){
+        ArrayList<String> addressesList = new ArrayList<>();
+
+        try {
+            List<NetworkInterface> interfaces = Collections.list(NetworkInterface.getNetworkInterfaces());
+            for (NetworkInterface intf : interfaces) {
+                List<InetAddress> addrs = Collections.list(intf.getInetAddresses());
+                for (InetAddress addr : addrs) {
+                    if (!addr.isLoopbackAddress()) {
+                        String sAddr = addr.getHostAddress();
+                        //boolean isIPv4 = InetAddressUtils.isIPv4Address(sAddr);
+                        boolean isIPv4 = sAddr.indexOf(':')<0;
+
+                        if (isIPv4){
+                            String ipaddress = sAddr;
+                            addressesList.add(ipaddress);
+                        }
+                    }
+                }
+            }
+        } catch (Exception ex) { } // for now eat exceptions
+
+//
+//        try {
+//            for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();) {
+//                NetworkInterface intf = (NetworkInterface) en.nextElement();
+//                for (Enumeration<InetAddress> enumIpAddr = intf
+//                        .getInetAddresses(); enumIpAddr.hasMoreElements();) {
+//                    InetAddress inetAddress = enumIpAddr.nextElement();
+//                    if (!inetAddress.isLoopbackAddress()) {
+//                        String ipaddress = inetAddress.getHostAddress();
+//                        addressesList.add(ipaddress);
+//                    }
+//                }
+//            }
+//        } catch (SocketException ex) {
+//            L.e("Exception in Get IP Address: " + ex.toString(), this);
+//        }
+
+        if(addressesList.size() <= 0) return null;
+        else {
+            String[] addresses = new String[addressesList.size()];
+            addressesList.toArray(addresses);
+            return addresses;
+        }
     }
 
     public AndroidSharkEngine(Activity activity) {
         super();
         this.activateASIP();
-        this.context = activity.getApplicationContext();
+        this.mContext = activity.getApplicationContext();
         this.activityRef = new WeakReference<>(activity);
     }
 
@@ -67,7 +147,7 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine implements KPNoti
      */
     protected Stub createWifiDirectStreamStub(SharkStub kepStub) throws SharkProtocolNotSupportedException {
         if (currentStub == null) {
-            currentStub = new WifiDirectStreamStub(context, this, mSpace, mName);
+            currentStub = new WifiDirectStreamStub(mContext, this, mSpace, mName);
             currentStub.setHandler((RequestHandler) kepStub);
         }
         return currentStub;
@@ -87,7 +167,7 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine implements KPNoti
     @Override
     protected Stub createNfcStreamStub(SharkStub stub) throws SharkProtocolNotSupportedException {
         if (currentStub == null) {
-            currentStub = new NfcMessageStub(context, activityRef);
+            currentStub = new NfcMessageStub(mContext, activityRef);
             currentStub.setHandler((RequestHandler) stub);
         }
         return currentStub;
@@ -128,7 +208,7 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine implements KPNoti
 
     public void offerInterest(String topic, String name){
 
-        if(TextUtils.isEmpty(topic))
+        if(topic.isEmpty())
            topic = "Dummy Interesse";
 
         STSet set = InMemoSharkKB.createInMemoSTSet();
@@ -142,6 +222,25 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine implements KPNoti
         } catch (SharkKBException e) {
             e.printStackTrace();
         }
+
+        String[] addresses = getDeviceIPAddresses();
+
+//        L.d("Do i have addresses?" + addresses.length, this);
+//
+        String[] tcpAddresses = new String[addresses.length];
+
+        int i = 0;
+        for (String address : addresses){
+            tcpAddresses[i++] = "tcp://" + address + ":7071";
+        }
+
+        String si = mName+topic+System.currentTimeMillis();
+
+        PeerSemanticTag owner = InMemoSharkKB.createInMemoPeerSemanticTag(mName,new String[]{si}, tcpAddresses);
+
+        L.d(owner.getAddresses()[0], this);
+
+        setEngineOwnerPeer(owner);
 
     }
 
