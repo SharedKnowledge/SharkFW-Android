@@ -17,8 +17,10 @@ import net.sharkfw.knowledgeBase.STSet;
 import net.sharkfw.knowledgeBase.SemanticTag;
 import net.sharkfw.knowledgeBase.SharkKBException;
 import net.sharkfw.knowledgeBase.SpatialSTSet;
+import net.sharkfw.knowledgeBase.SpatialSemanticTag;
 import net.sharkfw.knowledgeBase.SystemPropertyHolder;
 import net.sharkfw.knowledgeBase.TimeSTSet;
+import net.sharkfw.knowledgeBase.TimeSemanticTag;
 import net.sharkfw.knowledgeBase.inmemory.InMemoSharkKB;
 import net.sharkfw.kp.KPNotifier;
 import net.sharkfw.peer.J2SEAndroidSharkEngine;
@@ -148,21 +150,45 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine implements KPNoti
      * An ASIPOutMessage will be created an depending on the Content(Knowledge || Interest) an expose or an insert
      * will be triggered.
      *
+     * @param topic
      * @param receiver the actual receiver of the message
-     * @param locations
-     * @param times
+     * @param location
+     * @param time
      * @param knowledge
      */
-    public void sendBroadcast(PeerSemanticTag receiver, SemanticTag locations, SemanticTag times, ASIPKnowledge knowledge){
-
+    public void sendBroadcast(final SemanticTag topic, final PeerSemanticTag receiver, final SpatialSemanticTag location, final TimeSemanticTag time, final ASIPKnowledge knowledge){
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                ASIPOutMessage message = createASIPOutMessage(topic, receiver, location, time);
+                message.insert(knowledge);
+            }
+        }).start();
     }
 
-    public void sendBroadcast(PeerSemanticTag receiver, SemanticTag locations, SemanticTag times, ASIPInterest interest){
-
+    /**
+     *
+     * @param topic
+     * @param receiver
+     * @param location
+     * @param time
+     * @param interest
+     */
+    public void sendBroadcast(final SemanticTag topic, final PeerSemanticTag receiver, final SpatialSemanticTag location, final TimeSemanticTag time, final ASIPInterest interest){
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                ASIPOutMessage message = createASIPOutMessage(topic, receiver, location, time);
+                message.expose(interest);
+            }
+        }).start();
     }
 
-    public ASIPOutMessage createASIPOutMessage(PeerSemanticTag receiver, SemanticTag locations, SemanticTag times){
-        return null;
+    public ASIPOutMessage createASIPOutMessage(SemanticTag topic, PeerSemanticTag receiver, SpatialSemanticTag location, TimeSemanticTag time){
+        String[] addresses = getNearbyPeerTCPAddresses();
+        if (addresses.length <= 0) return null;
+
+        return createASIPOutMessage(addresses, this.getOwner(), receiver, location, time, topic, 10);
     }
 
     public void sendBroadcast(String text) {
