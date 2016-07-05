@@ -26,6 +26,7 @@ import net.sharkfw.knowledgeBase.SharkKBException;
 import net.sharkfw.knowledgeBase.SpatialSemanticTag;
 import net.sharkfw.knowledgeBase.TimeSemanticTag;
 import net.sharkfw.knowledgeBase.geom.SpatialAlgebra;
+import net.sharkfw.peer.ASIPPort;
 import net.sharkfw.peer.KEPConnection;
 import net.sharkfw.peer.KnowledgePort;
 import net.sharkfw.peer.SharkEngine;
@@ -38,7 +39,7 @@ import org.json.JSONException;
 import java.io.IOException;
 import java.util.List;
 
-public class RouterKP extends KnowledgePort {
+public class RouterKP extends ASIPPort{
     public static final String TAG_COORDINATE_TTL = "coordinateTTL";
 
     public static final long DEFAULT_COORDINATE_TTL = 24 * 60 * 60 * 1000; //days in milliseconds
@@ -67,7 +68,7 @@ public class RouterKP extends KnowledgePort {
     }
 
     public RouterKP(SharkEngine engine, Context context, long coordinateTTL) {
-        super(engine);
+//        super(engine);
 
         mIsRouting = false;
 
@@ -94,21 +95,12 @@ public class RouterKP extends KnowledgePort {
     }
 
     @Override
-    protected void handleInsert(Knowledge knowledge, KEPConnection kepConnection) {
+    public boolean handleMessage(ASIPInMessage msg, ASIPConnection con) {
+//        super.doProcess(msg, con);
 
-    }
-
-    @Override
-    protected void handleExpose(SharkCS sharkCS, KEPConnection kepConnection) {
-
-    }
-
-    @Override
-    protected void doProcess(ASIPInMessage msg, ASIPConnection con) {
-        super.doProcess(msg, con);
-
+        boolean persist = false;
         if (mIsRouting) {
-            boolean persist = false;
+            persist = false;
 
             try {
                 if (msg.getReceiverSpatial() != null && this.isMovementProfileCloser(msg.getReceiverSpatial())) {
@@ -130,6 +122,7 @@ public class RouterKP extends KnowledgePort {
                 e.printStackTrace();
             }
         }
+        return persist;
     }
 
     public void startRouting() {
