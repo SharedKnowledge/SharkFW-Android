@@ -103,7 +103,10 @@ public class SharkService extends Service implements KPNotifier {
         L.d("Starting", this);
         if (!mIsEngingeStarted) {
             if (mKnowledgePorts.isEmpty()) {
-                addKP(new RadarKP(mEngine, InMemoSharkKB.createInMemoASIPInterest(), this));
+                RadarKP radarKP = new RadarKP(mEngine, InMemoSharkKB.createInMemoASIPInterest());
+                radarKP.addNotifier(this);
+                radarKP.addNotifier(mEngine);
+                addKP(radarKP);
             }
 
             try {
