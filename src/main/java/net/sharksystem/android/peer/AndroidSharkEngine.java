@@ -23,6 +23,8 @@ import net.sharksystem.android.protocols.wifidirect.WifiDirectStreamStub;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.List;
 
 public class AndroidSharkEngine extends J2SEAndroidSharkEngine {
     Context context;
@@ -126,6 +128,10 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine {
             e.printStackTrace();
         }
 
+    }
+
+    public List<PeerSemanticTag> getNearbyPeers() {
+        return new ArrayList<PeerSemanticTag>();
     }
 
 

@@ -72,8 +72,9 @@ public class LocationReceiver extends BroadcastReceiver {
 
         //check if new coordinate is out of current movement profile. If yes, add it
         if (!contentProvider.getConvexHull().contains(geometry)) {
-            CoordinateDTO newCoordinate = contentProvider.persist(coordinate);
+            contentProvider.persist(coordinate);
         }
+
         List<CoordinateDTO> coordinates = contentProvider.getAllCoordinates();
         //check coordinates of movement profile for their expiration
         for (CoordinateDTO coordinateDTO : coordinates) {

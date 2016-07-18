@@ -43,6 +43,7 @@ public class RouterKP extends KnowledgePort {
 
     public static final long DEFAULT_COORDINATE_TTL = 24 * 60 * 60 * 1000; //days in milliseconds
     public static final long DEFAULT_LOCATION_CHECK_INTERVAL = 2 * 60 * 1000;
+    public static final int MESSAGE_CHECK_INTERVAL = 10000;
 
     private SharkEngine mEngine;
     private Context mContext;
@@ -59,8 +60,6 @@ public class RouterKP extends KnowledgePort {
     private Handler mHandler;
 
     private boolean mIsRouting;
-
-    public static final int MESSAGE_CHECK_INTERVAL = 10000;
 
     public RouterKP(SharkEngine engine, Context context) {
         this(engine, context, DEFAULT_COORDINATE_TTL);
@@ -175,7 +174,7 @@ public class RouterKP extends KnowledgePort {
                 destination.setLongitude(geometry.getCoordinate().y);
                 if (lastLocation.distanceTo(destination) < 100) {
 
-                    //TODO real broadcast
+                    //TODO real broadcast with list of peers in engine
                     Toast.makeText(mContext, "Message broadcast because destination reached", Toast.LENGTH_SHORT).show();
                     mMessageContentProvider.delete(message);
                 }
