@@ -2,6 +2,8 @@ package net.sharksystem.android.protocols.routing.db;
 
 import net.sharkfw.knowledgeBase.PeerSemanticTag;
 import net.sharkfw.knowledgeBase.STSet;
+import net.sharkfw.knowledgeBase.SemanticNet;
+import net.sharkfw.knowledgeBase.SemanticTag;
 import net.sharkfw.knowledgeBase.SpatialSemanticTag;
 import net.sharkfw.knowledgeBase.TimeSemanticTag;
 
@@ -16,6 +18,7 @@ public class MessageDTO {
     private long ttl;
 
     private int command;
+    private SemanticTag topic;
     private PeerSemanticTag sender;
     private STSet receivers;
     private PeerSemanticTag receiverPeer;
@@ -93,6 +96,14 @@ public class MessageDTO {
 
     public void setCommand(int command) {
         this.command = command;
+    }
+
+    public SemanticTag getTopic() {
+        return this.topic;
+    }
+
+    public void setTopic(SemanticTag topic) {
+        this.topic = topic;
     }
 
     public PeerSemanticTag getSender() {

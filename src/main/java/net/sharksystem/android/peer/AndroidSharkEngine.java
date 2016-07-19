@@ -10,8 +10,12 @@ import net.sharkfw.asip.ASIPKnowledge;
 import net.sharkfw.asip.ASIPSpace;
 import net.sharkfw.asip.SharkStub;
 import net.sharkfw.asip.engine.ASIPConnection;
+import net.sharkfw.asip.engine.ASIPMessage;
 import net.sharkfw.asip.engine.ASIPOutMessage;
+import net.sharkfw.asip.engine.ASIPSerializer;
 import net.sharkfw.kep.SharkProtocolNotSupportedException;
+import net.sharkfw.knowledgeBase.Interest;
+import net.sharkfw.knowledgeBase.Knowledge;
 import net.sharkfw.knowledgeBase.PeerSemanticTag;
 import net.sharkfw.knowledgeBase.STSet;
 import net.sharkfw.knowledgeBase.SemanticTag;
@@ -25,9 +29,13 @@ import net.sharkfw.protocols.RequestHandler;
 import net.sharkfw.protocols.Stub;
 import net.sharkfw.system.L;
 import net.sharksystem.android.protocols.nfc.NfcMessageStub;
+import net.sharksystem.android.protocols.routing.db.MessageDTO;
 import net.sharksystem.android.protocols.wifidirect.WifiDirectStreamStub;
 
+import org.apache.commons.io.IOUtils;
+
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.ref.WeakReference;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
@@ -290,6 +298,29 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine implements KPNoti
 
     public void sendBroadcast(ASIPKnowledge knowledge) {
         ((WifiDirectStreamStub) currentStub).sendBroadcast(knowledge);
+    }
+
+    public void sendMessage(final MessageDTO message) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                ASIPOutMessage asipMessage = createASIPOutMessage(message.getReceiverPeer().getAddresses(), getOwner(), message.getReceiverPeer(), message.getReceiverSpatial(), message.getReceiverTime(), message.getTopic(), message.getTtl());
+                try {
+                    if (message.getCommand() == ASIPMessage.ASIP_INSERT) {
+                        ASIPKnowledge knowledge = ASIPSerializer.deserializeASIPKnowledge(message.getContent());
+                        asipMessage.insert(knowledge);
+                    } else  if (message.getCommand() == ASIPMessage.ASIP_EXPOSE) {
+                        ASIPInterest interest = ASIPSerializer.deserializeASIPInterest(message.getContent());
+                        asipMessage.expose(interest);
+                    } else {
+                        //TODO is this right?
+                        asipMessage.raw(message.getContent().getBytes());
+                    }
+                } catch (SharkKBException e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
     }
 
     @Override

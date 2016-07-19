@@ -21,6 +21,7 @@ import com.vividsolutions.jts.io.WKTReader;
 import net.sharkfw.asip.engine.ASIPConnection;
 import net.sharkfw.asip.engine.ASIPInMessage;
 import net.sharkfw.knowledgeBase.Knowledge;
+import net.sharkfw.knowledgeBase.PeerSemanticTag;
 import net.sharkfw.knowledgeBase.SharkCS;
 import net.sharkfw.knowledgeBase.SharkKBException;
 import net.sharkfw.knowledgeBase.SpatialSemanticTag;
@@ -30,6 +31,7 @@ import net.sharkfw.peer.ASIPPort;
 import net.sharkfw.peer.KEPConnection;
 import net.sharkfw.peer.KnowledgePort;
 import net.sharkfw.peer.SharkEngine;
+import net.sharksystem.android.peer.AndroidSharkEngine;
 import net.sharksystem.android.protocols.routing.db.CoordinateContentProvider;
 import net.sharksystem.android.protocols.routing.db.MessageContentProvider;
 import net.sharksystem.android.protocols.routing.db.MessageDTO;
@@ -46,7 +48,7 @@ public class RouterKP extends ASIPPort{
     public static final long DEFAULT_LOCATION_CHECK_INTERVAL = 2 * 60 * 1000;
     public static final int MESSAGE_CHECK_INTERVAL = 10000;
 
-    private SharkEngine mEngine;
+    private AndroidSharkEngine mEngine;
     private Context mContext;
 
     private CoordinateContentProvider mCoordinateContentProvider;
@@ -62,11 +64,11 @@ public class RouterKP extends ASIPPort{
 
     private boolean mIsRouting;
 
-    public RouterKP(SharkEngine engine, Context context) {
+    public RouterKP(AndroidSharkEngine engine, Context context) {
         this(engine, context, DEFAULT_COORDINATE_TTL);
     }
 
-    public RouterKP(SharkEngine engine, Context context, long coordinateTTL) {
+    public RouterKP(AndroidSharkEngine engine, Context context, long coordinateTTL) {
 //        super(engine);
 
         mIsRouting = false;
@@ -102,7 +104,9 @@ public class RouterKP extends ASIPPort{
             persist = false;
 
             try {
-                if (msg.getReceiverSpatial() != null && this.isMovementProfileCloser(msg.getReceiverSpatial())) {
+                if (msg.getReceiverPeer() != null) {
+                    persist = true;
+                } else if (msg.getReceiverSpatial() != null && this.isMovementProfileCloser(msg.getReceiverSpatial())) {
                     persist = true;
                 }
                 else if (msg.getReceiverTime() != null && !this.isTimeSpanInPast(msg.getReceiverTime())) {
@@ -143,17 +147,33 @@ public class RouterKP extends ASIPPort{
             for (int i = messages.size() - 1; i >=0; i--) {
                 MessageDTO message = messages.get(i);
 
-                if (message.getReceiverSpatial() != null) {
+                if (message.getReceiverPeer() != null) {
+                    this.checkReceiverPeer(message);
+                } else if (message.getReceiverSpatial() != null) {
                     this.checkReceiverSpatial(message);
                 } else if (message.getReceiverTime() != null) {
                     this.checkReceiverTime(message);
-                } else if (message.getReceiverPeer() != null) {
-                    // TODO
                 }
             }
         } catch (SharkKBException e) {
             e.printStackTrace();
         }
+    }
+
+    private void checkReceiverPeer(MessageDTO message) {
+        List<PeerSemanticTag> nearbyPeers = mEngine.getNearbyPeers();
+        PeerSemanticTag receiver = message.getReceiverPeer();
+
+        for (PeerSemanticTag peer : nearbyPeers) {
+            if (peer.identical(receiver)) {
+                mEngine.sendMessage(message);
+                mMessageContentProvider.delete(message);
+                return;
+            }
+        }
+
+        //Receiver is not nearby, so try to send it to as many new ppl as possible
+        this.forwardMessage(message);
     }
 
     private void checkReceiverSpatial(MessageDTO message) {
@@ -193,6 +213,10 @@ public class RouterKP extends ASIPPort{
             Toast.makeText(mContext, "Message broadcast because destination reached", Toast.LENGTH_SHORT).show();
             mMessageContentProvider.delete(message);
         }
+    }
+
+    private void forwardMessage(MessageDTO message) {
+        //TODO
     }
 
     private boolean isMovementProfileCloser(SpatialSemanticTag spatialSemanticTag) throws SharkKBException, ParseException {

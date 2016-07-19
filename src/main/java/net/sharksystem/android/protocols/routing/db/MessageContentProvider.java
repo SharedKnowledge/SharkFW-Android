@@ -43,7 +43,8 @@ public class MessageContentProvider {
         dbHelper = MySQLiteHelper.getInstance(context);
     }
 
-    // TODO Signature
+    //TODO Signature
+    //TODO is the topic right? as it is derived from ASIPMessage
     public void persist(ASIPInMessage msg) throws JSONException, SharkKBException, IOException {
         SQLiteDatabase database = dbHelper.getWritableDatabase();
 
@@ -67,6 +68,7 @@ public class MessageContentProvider {
         //values.put(MySQLiteHelper.SIGNATURE, msg.getSignature());
         values.put(MySQLiteHelper.COLUMN_TTL, msg.getTtl());
         values.put(MySQLiteHelper.COLUMN_COMMAND, msg.getCommand());
+        values.put(MySQLiteHelper.COLUMN_TOPIC, msg.getTopic() != null ? ASIPSerializer.serializeTag(msg.getTopic()).toString() : "");
         values.put(MySQLiteHelper.COLUMN_SENDER, msg.getSender() != null ? ASIPSerializer.serializeTag(msg.getSender()).toString() : "");
         values.put(MySQLiteHelper.COLUMN_RECEIVERS, msg.getReceivers() != null ? ASIPSerializer.serializeSTSet(msg.getReceivers()).toString() : "");
         values.put(MySQLiteHelper.COLUMN_RECEIVERPEER, msg.getReceiverPeer() != null ? ASIPSerializer.serializeTag(msg.getReceiverPeer()).toString() : "");
@@ -79,7 +81,8 @@ public class MessageContentProvider {
         dbHelper.close();
     }
 
-    // TODO Signature
+    //TODO Signature
+    //TODO is the topic right? as it is derived from ASIPMessage
     public void update(MessageDTO msg) throws JSONException, SharkKBException {
         SQLiteDatabase database = dbHelper.getWritableDatabase();
 
@@ -92,6 +95,7 @@ public class MessageContentProvider {
         //values.put(MySQLiteHelper.SIGNATURE, msg.getSignature());
         values.put(MySQLiteHelper.COLUMN_TTL, msg.getTtl());
         values.put(MySQLiteHelper.COLUMN_COMMAND, msg.getCommand());
+        values.put(MySQLiteHelper.COLUMN_TOPIC, msg.getTopic() != null ? ASIPSerializer.serializeTag(msg.getTopic()).toString() : "");
         values.put(MySQLiteHelper.COLUMN_SENDER, msg.getSender() != null ? ASIPSerializer.serializeTag(msg.getSender()).toString() : "");
         values.put(MySQLiteHelper.COLUMN_RECEIVERS, msg.getReceivers() != null ? ASIPSerializer.serializeSTSet(msg.getReceivers()).toString() : "");
         values.put(MySQLiteHelper.COLUMN_RECEIVERPEER, msg.getReceiverPeer() != null ? ASIPSerializer.serializeTag(msg.getReceiverPeer()).toString() : "");
@@ -142,11 +146,12 @@ public class MessageContentProvider {
         messageDTO.setTtl(cursor.getLong(6));
         messageDTO.setCommand(cursor.getInt(7));
         messageDTO.setSender(ASIPSerializer.deserializePeerTag(cursor.getString(8)));
-        //messageDTO.setReceivers(ASIPSerializer.deserializeSTSet(cursor.getString(9)));
-        messageDTO.setReceiverPeer(ASIPSerializer.deserializePeerTag(cursor.getString(10)));
-        messageDTO.setReceiverSpatial(ASIPSerializer.deserializeSpatialTag(cursor.getString(11)));
-        messageDTO.setReceiverTime(ASIPSerializer.deserializeTimeTag(cursor.getString(12)));
-        messageDTO.setContent(cursor.getString(13));
+        messageDTO.setTopic(ASIPSerializer.deserializeTag(cursor.getString(9)));
+        //messageDTO.setReceivers(ASIPSerializer.deserializeSTSet(cursor.getString(10)));
+        messageDTO.setReceiverPeer(ASIPSerializer.deserializePeerTag(cursor.getString(11)));
+        messageDTO.setReceiverSpatial(ASIPSerializer.deserializeSpatialTag(cursor.getString(12)));
+        messageDTO.setReceiverTime(ASIPSerializer.deserializeTimeTag(cursor.getString(13)));
+        messageDTO.setContent(cursor.getString(14));
 
         //TODO content is just a string right now..can be interest or knowledge or raw though
         return messageDTO;

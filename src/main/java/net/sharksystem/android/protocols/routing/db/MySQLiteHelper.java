@@ -24,6 +24,7 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
     public static final String COLUMN_SIGNED = "signed";
     public static final String COLUMN_TTL = "ttl";
     public static final String COLUMN_COMMAND = "command";
+    public static final String COLUMN_TOPIC = "topic";
     public static final String COLUMN_SENDER = "sender";
     public static final String COLUMN_RECEIVERS = "receivers";
     public static final String COLUMN_SIGNATURE = "signature";
@@ -55,6 +56,7 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
             + COLUMN_SIGNED + " bool, "
             + COLUMN_TTL + " signed bigint, "
             + COLUMN_COMMAND + " integer, "
+            + COLUMN_TOPIC + " text, "
             + COLUMN_SENDER + " text, "
             + COLUMN_RECEIVERS + " text, "
             // + COLUMN_SIGNATURE + " text, "
