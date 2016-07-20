@@ -23,7 +23,7 @@ public class MessageContentProvider {
     public static final long MAX_CHECKS = 2;
 
     private MySQLiteHelper dbHelper;
-    private String[] allColumns = { MySQLiteHelper.COLUMN_ID,
+    private String[] allMessagesColumns = { MySQLiteHelper.COLUMN_ID,
             MySQLiteHelper.COLUMN_VERSION,
             MySQLiteHelper.COLUMN_FORMAT,
             MySQLiteHelper.COLUMN_ENCRYPTED,
@@ -38,6 +38,10 @@ public class MessageContentProvider {
             MySQLiteHelper.COLUMN_RECEIVERLOCATION,
             MySQLiteHelper.COLUMN_RECEIVERTIME,
             MySQLiteHelper.COLUMN_CONTENT};
+
+    private String[] allReceiversColumns = { MySQLiteHelper.COLUMN_ID,
+            MySQLiteHelper.COLUMN_MESSAGE_ID,
+            MySQLiteHelper.COLUMN_PEER_ADDRESS};
 
     public MessageContentProvider(Context context) {
         dbHelper = MySQLiteHelper.getInstance(context);
@@ -113,6 +117,7 @@ public class MessageContentProvider {
         long id = messageDTO.getId();
         System.out.println("Message deleted with id: " + id);
         database.delete(MySQLiteHelper.TABLE_MESSAGES, MySQLiteHelper.COLUMN_ID + " = " + id, null);
+        database.delete(MySQLiteHelper.TABLE_SENT_MESSAGES, MySQLiteHelper.COLUMN_MESSAGE_ID + " = " + messageDTO.getId(), null);
         dbHelper.close();
     }
 
@@ -120,7 +125,7 @@ public class MessageContentProvider {
         SQLiteDatabase database = dbHelper.getReadableDatabase();
         List<MessageDTO> messageDTOs = new ArrayList<>();
 
-        Cursor cursor = database.query(MySQLiteHelper.TABLE_MESSAGES,  allColumns, null, null, null, null, null);
+        Cursor cursor = database.query(MySQLiteHelper.TABLE_MESSAGES, allMessagesColumns, null, null, null, null, null);
 
         cursor.moveToFirst();
         while (!cursor.isAfterLast()) {
@@ -156,5 +161,34 @@ public class MessageContentProvider {
         //TODO content is just a string right now..can be interest or knowledge or raw though
         return messageDTO;
     }
+
+    public List<String> getReceivers(MessageDTO message) {
+        SQLiteDatabase database = dbHelper.getReadableDatabase();
+        List<String> receiverAddresses = new ArrayList<>();
+
+        Cursor cursor = database.query(MySQLiteHelper.TABLE_SENT_MESSAGES, allReceiversColumns, MySQLiteHelper.COLUMN_MESSAGE_ID + " = " + message.getId(), null, null, null, null);
+        while (!cursor.isAfterLast()) {
+            receiverAddresses.add(cursor.getString(2));
+            cursor.moveToNext();
+        }
+
+        cursor.close();
+        dbHelper.close();
+        return receiverAddresses;
+    }
+
+    public void updateReceivers(MessageDTO message, List<String> addressesToSend) {
+        SQLiteDatabase database = dbHelper.getWritableDatabase();
+
+        for (String address : addressesToSend) {
+            ContentValues values = new ContentValues();
+            values.put(MySQLiteHelper.COLUMN_MESSAGE_ID, message.getId());
+            values.put(MySQLiteHelper.COLUMN_PEER_ADDRESS, address);
+            database.insert(MySQLiteHelper.TABLE_SENT_MESSAGES, null, values);
+        }
+        dbHelper.close();
+    }
+
+
 
 }

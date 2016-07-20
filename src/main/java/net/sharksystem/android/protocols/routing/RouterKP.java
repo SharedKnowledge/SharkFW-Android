@@ -4,11 +4,9 @@ import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
-import android.content.PeriodicSync;
 import android.location.Location;
 import android.os.Handler;
 import android.text.TextUtils;
-import android.widget.Toast;
 
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
@@ -21,22 +19,16 @@ import com.vividsolutions.jts.io.WKTReader;
 
 import net.sharkfw.asip.engine.ASIPConnection;
 import net.sharkfw.asip.engine.ASIPInMessage;
-import net.sharkfw.knowledgeBase.Knowledge;
 import net.sharkfw.knowledgeBase.PeerSemanticTag;
-import net.sharkfw.knowledgeBase.SharkCS;
 import net.sharkfw.knowledgeBase.SharkKBException;
 import net.sharkfw.knowledgeBase.SpatialSemanticTag;
 import net.sharkfw.knowledgeBase.TimeSemanticTag;
 import net.sharkfw.knowledgeBase.geom.SpatialAlgebra;
 import net.sharkfw.peer.ASIPPort;
-import net.sharkfw.peer.KEPConnection;
-import net.sharkfw.peer.KnowledgePort;
-import net.sharkfw.peer.SharkEngine;
 import net.sharksystem.android.peer.AndroidSharkEngine;
 import net.sharksystem.android.protocols.routing.db.CoordinateContentProvider;
 import net.sharksystem.android.protocols.routing.db.MessageContentProvider;
 import net.sharksystem.android.protocols.routing.db.MessageDTO;
-import net.sharksystem.android.protocols.routing.db.SentMessagesContentProvider;
 
 import org.json.JSONException;
 
@@ -56,7 +48,6 @@ public class RouterKP extends ASIPPort{
 
     private CoordinateContentProvider mCoordinateContentProvider;
     private MessageContentProvider mMessageContentProvider;
-    private SentMessagesContentProvider mSentMessagesContentProvider;
 
     private long mCoordinateTTL;
 
@@ -219,7 +210,7 @@ public class RouterKP extends ASIPPort{
 
     private void forwardMessage(MessageDTO message) {
         String[] nearbyPeerTCPAddresses = mEngine.getNearbyPeerTCPAddresses();
-        List<String> previousReceiverAdresses = mSentMessagesContentProvider.getReceiversForMessage(message);
+        List<String> previousReceiverAdresses = mMessageContentProvider.getReceivers(message);
         List<String> addressesToSend = new ArrayList<>();
 
         for (String address : nearbyPeerTCPAddresses) {
@@ -229,7 +220,7 @@ public class RouterKP extends ASIPPort{
         }
 
         mEngine.sendMessage(message, addressesToSend.toArray(new String[addressesToSend.size()]));
-        mSentMessagesContentProvider.persist(message, addressesToSend);
+        mMessageContentProvider.updateReceivers(message, addressesToSend);
     }
 
     private boolean isMovementProfileCloser(SpatialSemanticTag spatialSemanticTag) throws SharkKBException, ParseException {
