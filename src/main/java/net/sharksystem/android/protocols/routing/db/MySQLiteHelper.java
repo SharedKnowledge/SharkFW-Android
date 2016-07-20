@@ -33,6 +33,10 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
     public static final String COLUMN_RECEIVERTIME = "receiver_time";
     public static final String COLUMN_CONTENT = "content";
 
+    public static final String TABLE_SENT_MESSAGES = "sent_messages";
+    public static final String COLUMN_MESSAGE_ID = "message_id";
+    public static final String COLUMN_PEER_ADDRESS = "peer_address";
+
     private static final String DATABASE_NAME = "movingrouter.db";
     private static final int DATABASE_VERSION = 1;
 
@@ -65,6 +69,13 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
             + COLUMN_RECEIVERTIME +  " text, "
             + COLUMN_CONTENT + " text);";
 
+    private static final String DATABASE_CREATE_SENT_MESSAGES =
+            "create table "
+            + TABLE_SENT_MESSAGES + "("
+            + COLUMN_ID + " integer primary key autoincrement, "
+            + COLUMN_MESSAGE_ID + " integer, "
+            + COLUMN_PEER_ADDRESS + " text);";
+
     public static MySQLiteHelper getInstance(Context context) {
         if (_instance == null) {
             _instance = new MySQLiteHelper(context.getApplicationContext());
@@ -81,6 +92,7 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
     public void onCreate(SQLiteDatabase database) {
         database.execSQL(DATABASE_CREATE_COORDINATES);
         database.execSQL(DATABASE_CREATE_MESSAGES);
+        database.execSQL(DATABASE_CREATE_SENT_MESSAGES);
     }
 
     @Override
@@ -90,6 +102,7 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
                         + newVersion + ", which will destroy all old data");
         db.execSQL("DROP TABLE IF EXISTS " + TABLE_MESSAGES);
         db.execSQL("DROP TABLE IF EXISTS " + TABLE_COORDINATES);
+        db.execSQL("DROP TABLE IF EXISTS " + TABLE_SENT_MESSAGES);
         onCreate(db);
     }
 }

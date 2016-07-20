@@ -4,6 +4,7 @@ import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.content.PeriodicSync;
 import android.location.Location;
 import android.os.Handler;
 import android.text.TextUtils;
@@ -35,10 +36,12 @@ import net.sharksystem.android.peer.AndroidSharkEngine;
 import net.sharksystem.android.protocols.routing.db.CoordinateContentProvider;
 import net.sharksystem.android.protocols.routing.db.MessageContentProvider;
 import net.sharksystem.android.protocols.routing.db.MessageDTO;
+import net.sharksystem.android.protocols.routing.db.SentMessagesContentProvider;
 
 import org.json.JSONException;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 public class RouterKP extends ASIPPort{
@@ -53,6 +56,7 @@ public class RouterKP extends ASIPPort{
 
     private CoordinateContentProvider mCoordinateContentProvider;
     private MessageContentProvider mMessageContentProvider;
+    private SentMessagesContentProvider mSentMessagesContentProvider;
 
     private long mCoordinateTTL;
 
@@ -166,7 +170,7 @@ public class RouterKP extends ASIPPort{
 
         for (PeerSemanticTag peer : nearbyPeers) {
             if (peer.identical(receiver)) {
-                mEngine.sendMessage(message);
+                mEngine.sendMessage(message, message.getReceiverPeer().getAddresses());
                 mMessageContentProvider.delete(message);
                 return;
             }
@@ -178,6 +182,7 @@ public class RouterKP extends ASIPPort{
 
     private void checkReceiverSpatial(MessageDTO message) {
         try {
+            boolean forward = false;
             Geometry geometry = new WKTReader().read(message.getReceiverSpatial().getGeometry().getWKT());
             Location lastLocation = LocationReceiver.getLastLocation();
             
@@ -186,20 +191,19 @@ public class RouterKP extends ASIPPort{
                 destination.setLatitude(geometry.getCoordinate().x);
                 destination.setLongitude(geometry.getCoordinate().y);
                 if (lastLocation.distanceTo(destination) < 100) {
-
-                    //TODO real broadcast with list of peers in engine
-                    Toast.makeText(mContext, "Message broadcast because destination reached", Toast.LENGTH_SHORT).show();
-                    mMessageContentProvider.delete(message);
+                    forward = true;
                 }
             } else if (geometry instanceof LineString) {
-                // TODO
+                forward = true;
             } else if (geometry instanceof Polygon) {
                 Geometry locationPoint = new GeometryFactory().createPoint(new Coordinate(lastLocation.getLatitude(), lastLocation.getLongitude()));
                 if (locationPoint.within(geometry)) {
-                    // TODO real broadcast
-                    Toast.makeText(mContext, "Message broadcast because destination reached", Toast.LENGTH_SHORT).show();
-                    mMessageContentProvider.delete(message);
+                    forward = true;
                 }
+            }
+
+            if (forward) {
+                this.forwardMessage(message);
             }
         } catch (ParseException e) {
             e.printStackTrace();
@@ -209,14 +213,23 @@ public class RouterKP extends ASIPPort{
     private void checkReceiverTime(MessageDTO message) {
         long currentTime = System.currentTimeMillis();
         if (currentTime >= message.getReceiverTime().getFrom() && currentTime <= message.getReceiverTime().getFrom() + message.getReceiverTime().getDuration()) {
-            // TODO real broadcast
-            Toast.makeText(mContext, "Message broadcast because destination reached", Toast.LENGTH_SHORT).show();
-            mMessageContentProvider.delete(message);
+            this.forwardMessage(message);
         }
     }
 
     private void forwardMessage(MessageDTO message) {
-        //TODO
+        String[] nearbyPeerTCPAddresses = mEngine.getNearbyPeerTCPAddresses();
+        List<String> previousReceiverAdresses = mSentMessagesContentProvider.getReceiversForMessage(message);
+        List<String> addressesToSend = new ArrayList<>();
+
+        for (String address : nearbyPeerTCPAddresses) {
+            if (!previousReceiverAdresses.contains(address)) {
+                addressesToSend.add(address);
+            }
+        }
+
+        mEngine.sendMessage(message, addressesToSend.toArray(new String[addressesToSend.size()]));
+        mSentMessagesContentProvider.persist(message, addressesToSend);
     }
 
     private boolean isMovementProfileCloser(SpatialSemanticTag spatialSemanticTag) throws SharkKBException, ParseException {

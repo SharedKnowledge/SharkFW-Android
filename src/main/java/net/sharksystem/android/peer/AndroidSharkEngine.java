@@ -300,11 +300,11 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine implements KPNoti
         ((WifiDirectStreamStub) currentStub).sendBroadcast(knowledge);
     }
 
-    public void sendMessage(final MessageDTO message) {
+    public void sendMessage(final MessageDTO message, final String[] addresses) {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                ASIPOutMessage asipMessage = createASIPOutMessage(message.getReceiverPeer().getAddresses(), getOwner(), message.getReceiverPeer(), message.getReceiverSpatial(), message.getReceiverTime(), message.getTopic(), message.getTtl());
+                ASIPOutMessage asipMessage = createASIPOutMessage(addresses, getOwner(), message.getReceiverPeer(), message.getReceiverSpatial(), message.getReceiverTime(), message.getTopic(), message.getTtl());
                 try {
                     if (message.getCommand() == ASIPMessage.ASIP_INSERT) {
                         ASIPKnowledge knowledge = ASIPSerializer.deserializeASIPKnowledge(message.getContent());
@@ -357,10 +357,8 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine implements KPNoti
     }
 
     public String[] getNearbyPeerTCPAddresses(long millis) {
-        ArrayList<PeerSemanticTag> peers = (ArrayList) getNearbyPeers();
-
-        ArrayList<String> addressList = new ArrayList<>();
-
+        List<PeerSemanticTag> peers = getNearbyPeers();
+        List<String> addressList = new ArrayList<>();
 
         for (PeerSemanticTag tag : peers) {
             String[] peerAddresses = tag.getAddresses();
