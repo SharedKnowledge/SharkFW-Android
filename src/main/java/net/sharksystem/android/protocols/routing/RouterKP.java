@@ -173,27 +173,13 @@ public class RouterKP extends ASIPPort{
 
     private void checkReceiverSpatial(MessageDTO message) {
         try {
-            boolean forward = false;
             Geometry geometry = new WKTReader().read(message.getReceiverSpatial().getGeometry().getWKT());
-            Location lastLocation = LocationReceiver.getLastLocation();
-            
-            if (geometry instanceof Point) {
-                Location destination = new Location("");
-                destination.setLatitude(geometry.getCoordinate().x);
-                destination.setLongitude(geometry.getCoordinate().y);
-                if (lastLocation.distanceTo(destination) < 100) {
-                    forward = true;
-                }
-            } else if (geometry instanceof LineString) {
-                forward = true;
-            } else if (geometry instanceof Polygon) {
-                Geometry locationPoint = new GeometryFactory().createPoint(new Coordinate(lastLocation.getLatitude(), lastLocation.getLongitude()));
-                if (locationPoint.within(geometry)) {
-                    forward = true;
-                }
-            }
+            Point destinationPoint = geometry.getCentroid();
+            Location destination = new Location("");
+            destination.setLatitude(destinationPoint.getX());
+            destination.setLongitude(destinationPoint.getY());
 
-            if (forward) {
+            if (destination.distanceTo(LocationReceiver.getLastLocation()) < 100) {
                 this.forwardMessage(message);
             }
         } catch (ParseException e) {
@@ -229,12 +215,19 @@ public class RouterKP extends ASIPPort{
         String ewkt = spatialSemanticTag.getGeometry().getEWKT();
 
         if (!TextUtils.isEmpty(wkt) && algebra.isValidWKT(wkt)) {
-            Location locationTmp = LocationReceiver.getLastLocation();
-            Geometry location = new GeometryFactory().createPoint(new Coordinate(locationTmp.getLatitude(), locationTmp.getLongitude()));
-            Geometry destination = new WKTReader().read(wkt);
-            Geometry convexHull = mCoordinateContentProvider.getConvexHull();
+            Point destinationPoint = new WKTReader().read(wkt).getCentroid();
+            Location destination = new Location("");
+            destination.setLatitude(destinationPoint.getX());
+            destination.setLongitude(destinationPoint.getY());
 
-            return (destination.distance(convexHull) < destination.distance(location));
+            Point movementProfileCentroidPoint = mCoordinateContentProvider.getConvexHull().getCentroid();
+            Location movementProfileCentroid = new Location("");
+            movementProfileCentroid.setLatitude(movementProfileCentroidPoint.getX());
+            movementProfileCentroid.setLongitude(movementProfileCentroidPoint.getY());
+
+            Location lastLocation = LocationReceiver.getLastLocation();
+
+            return (movementProfileCentroid.distanceTo(destination) < lastLocation.distanceTo(destination));
         } else if (!TextUtils.isEmpty(ewkt) && algebra.isValidEWKT(ewkt)) {
             // TODO there's no EWKT reader...mb also works with WKTREADER?
             return false;
