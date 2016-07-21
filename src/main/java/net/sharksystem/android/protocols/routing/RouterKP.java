@@ -39,13 +39,12 @@ import org.json.JSONException;
 import java.io.IOException;
 import java.util.List;
 
-public class RouterKP extends ASIPPort{
+public class RouterKP extends ASIPPort {
     public static final String TAG_COORDINATE_TTL = "coordinateTTL";
 
     public static final long DEFAULT_COORDINATE_TTL = 24 * 60 * 60 * 1000; //days in milliseconds
     public static final long DEFAULT_LOCATION_CHECK_INTERVAL = 2 * 60 * 1000;
 
-    private SharkEngine mEngine;
     private Context mContext;
 
     private CoordinateContentProvider mCoordinateContentProvider;
@@ -68,11 +67,10 @@ public class RouterKP extends ASIPPort{
     }
 
     public RouterKP(SharkEngine engine, Context context, long coordinateTTL) {
-//        super(engine);
+        super(engine);
 
         mIsRouting = false;
 
-        mEngine = engine;
         mContext = context;
         mCoordinateTTL = coordinateTTL;
 

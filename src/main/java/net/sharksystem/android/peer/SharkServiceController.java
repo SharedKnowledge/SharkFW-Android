@@ -20,6 +20,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class SharkServiceController implements ServiceConnection, KPListener {
 
     private CopyOnWriteArrayList<WifiDirectPeer> mPeers = null;
+    private CopyOnWriteArrayList<String> mStringMessages = null;
 
     private boolean mIsBound;
     private Intent mSharkIntent = null;
@@ -39,6 +40,7 @@ public class SharkServiceController implements ServiceConnection, KPListener {
     private SharkServiceController(Context context) {
         mContext = context.getApplicationContext();
         mPeers = new CopyOnWriteArrayList<>();
+        mStringMessages = new CopyOnWriteArrayList<>();
 
         mSharkIntent = new Intent(mContext, SharkService.class);
         mSharkIntent.putExtra("name", mName);
@@ -129,8 +131,20 @@ public class SharkServiceController implements ServiceConnection, KPListener {
 
     }
 
+    @Override
+    public void onNewStringMessage(String message) {
+        if(!mStringMessages.contains(message)){
+            mStringMessages.add(message);
+        }
+
+    }
+
     public CopyOnWriteArrayList<WifiDirectPeer> getPeers(){
         return mPeers;
+    }
+
+    public CopyOnWriteArrayList<String> getStringMessages(){
+        return mStringMessages;
     }
 
     public void resetPeers(){

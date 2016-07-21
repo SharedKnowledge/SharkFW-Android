@@ -1,11 +1,13 @@
 package net.sharksystem.android.peer;
 
+import android.annotation.TargetApi;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.wifi.WifiManager;
 import android.os.Binder;
+import android.os.Build;
 import android.os.IBinder;
 import android.util.Log;
 
@@ -15,12 +17,17 @@ import net.sharkfw.asip.engine.ASIPConnection;
 import net.sharkfw.kep.SharkProtocolNotSupportedException;
 import net.sharkfw.knowledgeBase.inmemory.InMemoSharkKB;
 import net.sharkfw.kp.KPNotifier;
-import net.sharkfw.peer.KnowledgePort;
+import net.sharkfw.peer.ASIPPort;
 import net.sharkfw.system.L;
 import net.sharksystem.android.protocols.routing.RouterKP;
+import net.sharksystem.android.protocols.wifidirect.RawMessagePort;
 import net.sharksystem.android.protocols.wifidirect.RadarKP;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 
 /**
@@ -43,7 +50,7 @@ public class SharkService extends Service implements KPNotifier {
 
     private AndroidSharkEngine mEngine;
     private RouterKP mRouterKP;
-    private ArrayList<KnowledgePort> mKnowledgePorts;
+    private ArrayList<ASIPPort> mKnowledgePorts;
 
     private String mNameToOffer;
     private String mInterestToOffer;
@@ -107,11 +114,14 @@ public class SharkService extends Service implements KPNotifier {
                 radarKP.addNotifier(this);
                 radarKP.addNotifier(mEngine);
                 addKP(radarKP);
+                RawMessagePort rawMessagePort = new RawMessagePort(mEngine, this);
+                addKP(rawMessagePort);
             }
 
             try {
                 mEngine.offerInterest(mInterestToOffer, mNameToOffer);
                 mEngine.startWifiDirect();
+                mEngine.startTCP(7071);
             } catch (IOException | SharkProtocolNotSupportedException e) {
                 e.printStackTrace();
             }
@@ -172,15 +182,45 @@ public class SharkService extends Service implements KPNotifier {
         }
     }
 
+    @TargetApi(Build.VERSION_CODES.KITKAT)
+    @Override
+    public void notifyRawReceived(InputStream inputStream, ASIPConnection asipConnection) {
+        if (mListeners.size() > 0) {
+            // there are listeners, so notify them
+            char[] buffer = new char[1024];
+            BufferedReader in = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
+            StringBuilder response= new StringBuilder();
+            int charsRead;
+
+            try {
+                if(in.ready()){
+                    do{
+                        charsRead = in.read(buffer);
+                        response.append(buffer, 0 ,charsRead);
+                    } while(charsRead == buffer.length);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            for (KPListener listener : mListeners) {
+                listener.onNewStringMessage(response.toString());
+            }
+        } else {
+            // maybe send an android notification?
+        }
+    }
+
     public void addKPListener(KPListener listener) {
-        mListeners.add(listener);
+        if(listener != null){
+            mListeners.add(listener);
+        }
     }
 
     public void removeKPListener(KPListener listener) {
         mListeners.remove(listener);
     }
 
-    public void addKP(KnowledgePort kp) {
+    public void addKP(ASIPPort kp) {
         if (!mKnowledgePorts.contains(kp))
             mKnowledgePorts.add(kp);
     }

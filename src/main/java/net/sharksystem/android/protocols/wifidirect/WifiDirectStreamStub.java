@@ -11,6 +11,7 @@ import android.os.Build;
 import net.sharkfw.asip.ASIPKnowledge;
 import net.sharkfw.asip.ASIPSpace;
 import net.sharkfw.asip.engine.ASIPInMessage;
+import net.sharkfw.asip.engine.ASIPMessage;
 import net.sharkfw.knowledgeBase.Knowledge;
 import net.sharkfw.knowledgeBase.PeerSemanticTag;
 import net.sharkfw.knowledgeBase.STSet;
@@ -147,9 +148,13 @@ public class WifiDirectStreamStub
     @Override
     public void onDnsSdTxtRecordAvailable(String fullDomainName, Map<String, String> txtRecordMap, WifiP2pDevice srcDevice) {
 
+
         // Add device to knownDevices list.
         updateDevices(srcDevice);
         // Add peer tp list
+        if(!txtRecordMap.containsKey("interest") && !txtRecordMap.containsKey("name")){
+            return;
+        }
         WifiDirectPeer peer = new WifiDirectPeer(srcDevice, txtRecordMap);
         addPeer(peer);
         // Update Lists in WifiDirectBroadcastManager
@@ -159,8 +164,9 @@ public class WifiDirectStreamStub
 
         // Send interest to KP
         ASIPInMessage msg = new ASIPInMessage(_engine, peer.getmInterest(), _engine.getAsipStub());
+        msg.setCommand(ASIPMessage.ASIP_EXPOSE);
         msg.setTtl(10);
-        msg.setSender(peer.getTag());
+        msg.setSender(peer.getmTag());
 
         _engine.getAsipStub().callListener(msg);
     }
@@ -294,7 +300,7 @@ public class WifiDirectStreamStub
     }
 
 //    private ASIPOutMessage createASIPOutMessage(WifiDirectPeer peer, String address){
-//        PeerSemanticTag tag = peer.getTag();
+//        PeerSemanticTag tag = peer.getmTag();
 ////        PeerSemanticTag tcpTag = InMemoSharkKB.createInMemoPeerSemanticTag(tag.getName(), tag.getSI(), "tcp://" + address + ":7071");
 //        PeerSemanticTag tcpTag = InMemoSharkKB.createInMemoPeerSemanticTag("Receiver", "www.receiver.de", "tcp://"+address+":7071");
 //        L.d(tcpTag.getAddresses().toString(), this);

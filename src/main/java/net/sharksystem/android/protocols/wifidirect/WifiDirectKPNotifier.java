@@ -17,6 +17,7 @@ import net.sharkfw.knowledgeBase.inmemory.InMemoSharkKB;
 import net.sharkfw.kp.KPNotifier;
 import net.sharkfw.system.L;
 
+import java.io.InputStream;
 import java.util.Iterator;
 
 /**
@@ -79,5 +80,10 @@ public class WifiDirectKPNotifier implements KPNotifier {
         } catch (SharkKBException e) {
             e.printStackTrace();
         }
+    }
+
+    @Override
+    public void notifyRawReceived(InputStream inputStream, ASIPConnection asipConnection) {
+
     }
 }

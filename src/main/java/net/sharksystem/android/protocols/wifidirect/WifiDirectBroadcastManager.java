@@ -27,7 +27,6 @@ import org.json.JSONException;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
@@ -339,7 +338,7 @@ public class WifiDirectBroadcastManager implements Runnable, ConnectionStatusLis
                     return peer;
                 }
 
-                PeerSemanticTag tag = peer.getTag();
+                PeerSemanticTag tag = peer.getmTag();
                 String wifiAddress = "";
                 // Get wifiAddress of the peer
                 String[] peerAddresses = tag.getAddresses();
@@ -537,7 +536,7 @@ public class WifiDirectBroadcastManager implements Runnable, ConnectionStatusLis
                 L.d("We are disconnected", this);
                 if(_knowledgeToSend!=null){
                     CopyOnWriteArrayList<PeerSemanticTag> peerSemanticTags = _mapWithPeers.get(_knowledgeToSend);
-                    peerSemanticTags.add(_lastConnectedPeer.getTag());
+                    peerSemanticTags.add(_lastConnectedPeer.getmTag());
                     L.d("Peer size:" + peerSemanticTags.size(), this);
                     _mapWithPeers.put(_knowledgeToSend, peerSemanticTags);
                     int count = _mapWithCounts.get(_knowledgeToSend);
@@ -733,7 +732,7 @@ public class WifiDirectBroadcastManager implements Runnable, ConnectionStatusLis
         // Add peer to send knowledge
 //        if(_knowledgeToSend!=null){
 //            ArrayList<PeerSemanticTag> peerSemanticTags = _mapWithPeers.get(_knowledgeToSend);
-//            peerSemanticTags.add(_lastConnectedPeer.getTag());
+//            peerSemanticTags.add(_lastConnectedPeer.getmTag());
 //            L.d("Peer size:" + peerSemanticTags.size(), this);
 //            _mapWithPeers.put(_knowledgeToSend, peerSemanticTags);
 //            int count = _mapWithCounts.get(_knowledgeToSend);

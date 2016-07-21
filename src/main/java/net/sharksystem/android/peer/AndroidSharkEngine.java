@@ -33,11 +33,16 @@ import net.sharkfw.system.L;
 import net.sharksystem.android.protocols.nfc.NfcMessageStub;
 import net.sharksystem.android.protocols.wifidirect.WifiDirectStreamStub;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.ref.WeakReference;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -208,25 +213,18 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine implements KPNoti
 
     public void offerInterest(String topic, String name){
 
-        if(topic.isEmpty())
-           topic = "Dummy Interesse";
+        if(name.isEmpty())
+            name = "A";
+        mName = name;
 
-        STSet set = InMemoSharkKB.createInMemoSTSet();
-        ASIPSpace space;
-        try {
-            set.createSemanticTag(topic, "www."+topic+".sharksystem.net");
-            space =  InMemoSharkKB.createInMemoASIPInterest(set, null, (PeerSemanticTag) null, null, null, null, null, ASIPSpace.DIRECTION_INOUT);
-            mSpace = space;
-            mName = name;
-//            currentStub.offer(space);
-        } catch (SharkKBException e) {
-            e.printStackTrace();
-        }
+        if(topic.isEmpty())
+           topic = "I";
 
         String[] addresses = getDeviceIPAddresses();
 
 //        L.d("Do i have addresses?" + addresses.length, this);
 //
+
         String[] tcpAddresses = new String[addresses.length];
 
         int i = 0;
@@ -234,13 +232,25 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine implements KPNoti
             tcpAddresses[i++] = "tcp://" + address + ":7071";
         }
 
-        String si = mName+topic+System.currentTimeMillis();
+        String si = mName+topic;
+//        String si = mName+topic+System.currentTimeMillis();
 
         PeerSemanticTag owner = InMemoSharkKB.createInMemoPeerSemanticTag(mName,new String[]{si}, tcpAddresses);
 
         L.d(owner.getAddresses()[0], this);
 
         setEngineOwnerPeer(owner);
+
+        STSet set = InMemoSharkKB.createInMemoSTSet();
+        ASIPSpace space;
+        try {
+            set.createSemanticTag(topic, topic+".net");
+            space =  InMemoSharkKB.createInMemoASIPInterest(set, null, getOwner(), null, null, null, null, ASIPSpace.DIRECTION_INOUT);
+            mSpace = space;
+//            currentStub.offer(space);
+        } catch (SharkKBException e) {
+            e.printStackTrace();
+        }
 
     }
 
@@ -284,14 +294,28 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine implements KPNoti
     }
 
     public ASIPOutMessage createASIPOutMessage(SemanticTag topic, PeerSemanticTag receiver, SpatialSemanticTag location, TimeSemanticTag time){
-        String[] addresses = getNearbyPeerTCPAddresses();
+        String[] addresses = this.getNearbyPeerTCPAddresses();
+
         if (addresses.length <= 0) return null;
 
         return createASIPOutMessage(addresses, this.getOwner(), receiver, location, time, topic, 10);
     }
 
-    public void sendBroadcast(String text) {
-        ((WifiDirectStreamStub) currentStub).sendBroadcast(text);
+
+    public void sendBroadcast(final String text) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                ASIPOutMessage message = createASIPOutMessage(null, null, null, null);
+                if(message==null) return;
+                ByteArrayInputStream stream = null;
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT) {
+                    stream = new ByteArrayInputStream(text.getBytes(StandardCharsets.UTF_8));
+                }
+                message.raw(stream);
+            }
+        }).start();
+//        ((WifiDirectStreamStub) currentStub).sendBroadcast(text);
     }
 
     public void sendBroadcast(ASIPKnowledge knowledge){
@@ -300,10 +324,16 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine implements KPNoti
 
     @Override
     public void notifyInterestReceived(ASIPInterest asipInterest, ASIPConnection asipConnection) {
-        L.d("Hey we received an Intererest", this);
+//        L.d("Hey we received an Intererest", this);
 
         PeerSemanticTag sender = asipInterest.getSender();
         if(sender != null){
+            for(Map.Entry<PeerSemanticTag, Long> entry : mNearbyPeers.entrySet()){
+                L.d(entry.getKey().getName() + " " + Arrays.toString(entry.getKey().getAddresses()), this);
+                if(entry.getKey().getName().equals(sender.getName())){
+                    mNearbyPeers.remove(entry.getKey());
+                }
+            }
             this.mNearbyPeers.put(sender, System.currentTimeMillis());
         }
 
@@ -311,6 +341,11 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine implements KPNoti
 
     @Override
     public void notifyKnowledgeReceived(ASIPKnowledge asipKnowledge, ASIPConnection asipConnection) {
+    }
+
+    @Override
+    public void notifyRawReceived(InputStream inputStream, ASIPConnection asipConnection) {
+
     }
 
     public List<PeerSemanticTag> getNearbyPeers(long millis){
@@ -332,7 +367,7 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine implements KPNoti
     }
 
     public String[] getNearbyPeerTCPAddresses(long millis){
-        ArrayList<PeerSemanticTag> peers = (ArrayList) getNearbyPeers();
+        ArrayList<PeerSemanticTag> peers = (ArrayList) getNearbyPeers(millis);
 
         ArrayList<String> addressList = new ArrayList<>();
 
@@ -352,6 +387,6 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine implements KPNoti
     }
 
     public String[] getNearbyPeerTCPAddresses(){
-        return getNearbyPeerTCPAddresses(1000 * 60);
+        return this.getNearbyPeerTCPAddresses(1000 * 60);
     }
 }

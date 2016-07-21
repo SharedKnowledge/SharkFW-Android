@@ -11,18 +11,14 @@ import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceInfo;
 import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceRequest;
-import android.net.wifi.p2p.nsd.WifiP2pServiceRequest;
 import android.os.Handler;
 
-import net.sharkfw.asip.ASIPInterest;
 import net.sharkfw.asip.ASIPSpace;
 import net.sharkfw.asip.engine.ASIPSerializer;
 import net.sharkfw.knowledgeBase.PeerSemanticTag;
 import net.sharkfw.knowledgeBase.SharkKBException;
-import net.sharkfw.protocols.StreamStub;
 import net.sharkfw.system.L;
 
-import java.security.PrivateKey;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -35,26 +31,26 @@ public class WifiDirectManager
 
     private final WifiP2pManager _manager;
     private final Context _context;
-    private ASIPSpace _interest;
     private WifiDirectStreamStub _stub;
     private WifiP2pManager.Channel _channel;
     private Handler _handler;
     private Map<String, String> _map;
     private WifiP2pDnsSdServiceInfo _serviceInfo;
-
     private boolean _isStarted = false;
-    private boolean _isReceiverRegistered = false;
 
+    private boolean _isReceiverRegistered = false;
     public final static int INITIALIZED = 0;
+
     public final static int DISCOVERING = 1;
     public final static int CONNECTING = 2;
     public final static int CONNECTED = 3;
-
     public int _status;
 
     private int _INTERVALL = 10000;
+
     private boolean _isOwner;
-    private String mName;
+    private ASIPSpace mInterest;
+    private String mSender;
 
     public WifiDirectManager(WifiP2pManager manager, Context context, WifiDirectStreamStub stub) {
         _manager = manager;
@@ -76,8 +72,8 @@ public class WifiDirectManager
 
     public WifiDirectManager(WifiP2pManager manager, Context context, WifiDirectStreamStub stub, ASIPSpace space, String name) {
         this(manager, context, stub);
-        _interest = space;
-        mName = name;
+        mInterest = space;
+        mSender = name;
     }
 
     @Override
@@ -179,14 +175,15 @@ public class WifiDirectManager
         String name = "";
 
         try {
-            interest = ASIPSerializer.serializeASIPSpace(_interest).toString();
+            interest = ASIPSerializer.serializeASIPSpace(mInterest).toString();
+            L.d(interest, this);
         } catch (SharkKBException e) {
             e.printStackTrace();
         }
-        if(mName==null || mName.isEmpty()){
-            name = "Anonym";
+        if(mSender ==null || mSender.isEmpty()){
+            name = "A";
         } else {
-            name = mName;
+            name = mSender;
         }
         _map.put("interest", interest);
         _map.put("name", name);
@@ -226,8 +223,8 @@ public class WifiDirectManager
     }
 
     public void offerInterest(ASIPSpace space) {
-        _interest = space;
-        mName = space.getSender().getName();
+        mInterest = space;
+        mSender = space.getSender().getName();
 //        resetDNSMap();
     }
 
