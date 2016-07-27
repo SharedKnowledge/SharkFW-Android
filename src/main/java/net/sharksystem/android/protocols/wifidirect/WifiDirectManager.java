@@ -7,267 +7,379 @@ import android.content.IntentFilter;
 import android.net.NetworkInfo;
 import android.net.wifi.WpsInfo;
 import android.net.wifi.p2p.WifiP2pConfig;
-import android.net.wifi.p2p.WifiP2pGroup;
+import android.net.wifi.p2p.WifiP2pDevice;
+import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceInfo;
 import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceRequest;
 import android.os.Handler;
 
+import net.sharkfw.asip.ASIPInterest;
 import net.sharkfw.asip.ASIPSpace;
 import net.sharkfw.asip.engine.ASIPSerializer;
+import net.sharkfw.knowledgeBase.PeerSTSet;
 import net.sharkfw.knowledgeBase.PeerSemanticTag;
+import net.sharkfw.knowledgeBase.STSet;
 import net.sharkfw.knowledgeBase.SharkKBException;
-import net.sharkfw.system.L;
+import net.sharkfw.knowledgeBase.SpatialSTSet;
+import net.sharkfw.knowledgeBase.TimeSTSet;
+import net.sharkfw.knowledgeBase.inmemory.InMemoInterest;
+import net.sharksystem.android.Application;
 
+import org.json.JSONException;
+
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
- * Created by j4rvis on 25.05.16.
+ * Created by j4rvis on 22.07.16.
  */
 public class WifiDirectManager
         extends BroadcastReceiver
-        implements Runnable{
+        implements WifiP2pManager.DnsSdTxtRecordListener,
+        WifiP2pManager.ConnectionInfoListener, Runnable {
 
-    private final WifiP2pManager _manager;
-    private final Context _context;
-    private WifiDirectStreamStub _stub;
-    private WifiP2pManager.Channel _channel;
-    private Handler _handler;
-    private Map<String, String> _map;
-    private WifiP2pDnsSdServiceInfo _serviceInfo;
-    private boolean _isStarted = false;
+    private boolean mIsReceiverRegistered;
+    private boolean mIsDiscovering;
+    private WifiP2pDnsSdServiceInfo mServiceInfo;
 
-    private boolean _isReceiverRegistered = false;
-    public final static int INITIALIZED = 0;
-
-    public final static int DISCOVERING = 1;
-    public final static int CONNECTING = 2;
-    public final static int CONNECTED = 3;
-    public int _status;
-
-    private int _INTERVALL = 10000;
-
-    private boolean _isOwner;
-    private ASIPSpace mInterest;
-    private String mSender;
-
-    public WifiDirectManager(WifiP2pManager manager, Context context, WifiDirectStreamStub stub) {
-        _manager = manager;
-        _context = context;
-        _stub = stub;
-
-        _channel =_manager.initialize(_context, _context.getMainLooper(), null);
-
-        WifiDirectAutoAccept wifiDirectAutoAccept = new WifiDirectAutoAccept(_context);
-        wifiDirectAutoAccept.intercept(true);
-
-        _manager.setDnsSdResponseListeners(_channel, null, _stub);
-
-        _handler = new Handler();
-        _map = new HashMap<>();
-
-        _status = INITIALIZED;
+    private enum WIFI_STATE {
+        INIT,
+        DISCOVERING,
+        CONNECTING,
+        CONNECTED,
+        DISCONNECTING,
+        DISCONNECTED,
+        NONE
     }
 
-    public WifiDirectManager(WifiP2pManager manager, Context context, WifiDirectStreamStub stub, ASIPSpace space, String name) {
-        this(manager, context, stub);
-        mInterest = space;
-        mSender = name;
+    private WIFI_STATE mState = WIFI_STATE.NONE;
+
+    private final WifiP2pManager mManager;
+    private final WifiP2pManager.Channel mChannel;
+    private WifiDirectStreamStub mStub = null;
+
+    private Context mContext = null;
+
+    // Interfaces
+    //
+    //
+
+    interface WifiDirectPeerListener {
+        void onNewInterest(ASIPInterest interest);
+        void onNewPeer(PeerSemanticTag peers);
+    }
+    interface WifiDirectNetworkListener {
+        void onNetworkCreated(List<PeerSemanticTag> connectedPeers);
+        void onNetworkDestroyed();
     }
 
-    @Override
-    public void run() {
-        final Runnable that = this;
-        _manager.discoverServices(_channel, new WifiP2pManager.ActionListener() {
-            @Override
-            public void onSuccess() {
-                _handler.postDelayed(that, _INTERVALL);
-            }
+    // Instance
+    //
+    //
 
-            @Override
-            public void onFailure(int reason) {
+    private static WifiDirectManager sInstance = null;
 
-                _manager.clearServiceRequests(_channel, new WifiActionListener("Clear ServiceRequests"));
-                WifiP2pDnsSdServiceRequest serviceRequest = WifiP2pDnsSdServiceRequest.newInstance();
-                _manager.addServiceRequest(_channel, serviceRequest, new WifiActionListener("Add ServiceRequest"));
-
-                initAdvertising();
-
-                _handler.postDelayed(that, _INTERVALL);
-            }
-        });
+    static {
+        sInstance = new WifiDirectManager();
     }
 
-    public boolean start() {
-        if(!_isStarted){
-            if(!_isReceiverRegistered){
+    private WifiDirectManager() {
+        mContext = Application.getAppContext();
+        mManager = (WifiP2pManager) mContext.getSystemService(Context.WIFI_P2P_SERVICE);
 
+        mChannel = mManager.initialize(mContext, mContext.getMainLooper(), null);
+        mManager.setDnsSdResponseListeners(mChannel, null, this);
+    }
+
+    public static WifiDirectManager getInstance() {
+        return sInstance;
+    }
+
+    // Setter
+    //
+    //
+
+    private List<WifiDirectPeerListener> mPeerListeners = new ArrayList<>();
+    private List<WifiDirectNetworkListener> mNetworkListeners = new ArrayList<>();
+
+    public void setWifiDirectStreamStub(WifiDirectStreamStub stub){
+        mStub = stub;
+    }
+
+    public void addPeerListener(WifiDirectPeerListener listener){
+        if(!mPeerListeners.contains(listener)){
+            mPeerListeners.add(listener);
+        }
+    }
+
+    public void addNetworkListener(WifiDirectNetworkListener listener){
+        if(!mNetworkListeners.contains(listener)){
+            mNetworkListeners.add(listener);
+        }
+    }
+
+    // Getter
+    //
+    //
+
+    public WIFI_STATE getState(){ return mState; }
+
+    // Private methods
+    //
+    //
+
+
+
+    // Public methods
+    //
+    //
+
+    HashMap<String, String> mRecordMap = new HashMap<>();
+
+    final static String TOPIC_RECORD = "TO";
+    final static String TYPE_RECORD = "TY";
+    final static String SENDER_RECORD = "SE";
+    final static String APPROVERS_RECORD = "AP";
+    final static String RECEIVER_RECORD = "RE";
+    final static String LOCATION_RECORD = "LO";
+    final static String TIME_RECORD = "TI";
+    final static String DIRECTION_RECORD = "DI";
+
+    final static String NAME_RECORD = "NAME";
+
+
+    public void startAdvertising(ASIPSpace space){
+
+        if(!mIsDiscovering){
+
+            if(mIsReceiverRegistered){
                 IntentFilter intentFilter = new IntentFilter();
                 intentFilter.addAction(WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION);
                 intentFilter.addAction(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION);
                 intentFilter.addAction(WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION);
                 intentFilter.addAction(WifiP2pManager.WIFI_P2P_DISCOVERY_CHANGED_ACTION);
                 intentFilter.addAction(WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION);
-                _context.registerReceiver(this, intentFilter);
-                _isReceiverRegistered = true;
+                mContext.registerReceiver(this, intentFilter);
+                mIsReceiverRegistered = true;
             }
 
-            initAdvertising();
+            mManager.clearLocalServices(mChannel, new WifiActionListener("Clear LocalServices"));
 
-            _manager.clearServiceRequests(_channel, new WifiActionListener("Clear ServiceRequests"));
-            WifiP2pDnsSdServiceRequest serviceRequest = WifiP2pDnsSdServiceRequest.newInstance();
-            _manager.addServiceRequest(_channel, serviceRequest, new WifiActionListener("Add ServiceRequest"));
+            String serializedTopic = null;
+            String serializedType = null;
+            String serializedSender = null;
+            String serializedApprovers = null;
+            String serializedReceiver = null;
+            String serializedLocation = null;
+            String serializedTime = null;
+            int direction = -1;
+            String name;
 
-            _isStarted = true;
+            try {
 
-            _handler.post(this);
+                serializedTopic = ASIPSerializer.serializeSTSet(space.getTopics()).toString();
+                serializedType = ASIPSerializer.serializeSTSet(space.getTypes()).toString();
+                serializedSender = ASIPSerializer.serializeTag(space.getSender()).toString();
+                serializedApprovers = ASIPSerializer.serializeSTSet(space.getApprovers()).toString();
+                serializedReceiver = ASIPSerializer.serializeSTSet(space.getReceivers()).toString();
+                serializedLocation = ASIPSerializer.serializeSTSet(space.getLocations()).toString();
+                serializedTime = ASIPSerializer.serializeSTSet(space.getTimes()).toString();
+                direction = space.getDirection();
 
-            _status = DISCOVERING;
-
-        }
-        return _isStarted;
-    }
-
-    public boolean stop() {
-        L.d("isStarted:" + _isStarted, this);
-        if(_isStarted){
-
-            L.d("Clear", this);
-
-            _handler.removeCallbacks(this);
-            _manager.clearServiceRequests(_channel, new WifiActionListener("Clear ServiceRequests"));
-            _manager.removeLocalService(_channel, _serviceInfo, new WifiActionListener("Remove LocalService"));
-            _manager.clearLocalServices(_channel, new WifiActionListener("Clear LocalServices"));
-
-            if(_isReceiverRegistered){
-                _context.unregisterReceiver(this);
-                _isReceiverRegistered = false;
+            } catch (SharkKBException e) {
+                e.printStackTrace();
+            } catch (JSONException e) {
+                e.printStackTrace();
             }
-            disconnect();
-            _isStarted=false;
-        }
-        return _isStarted;
-    }
 
-    private void resetDNSMap(){
-        if(_isStarted){
+            name = space.getSender().getName();
+            if(name.isEmpty()) {
+                name = "A";
+            }
 
-            _handler.removeCallbacks(this);
-            _manager.clearServiceRequests(_channel, new WifiActionListener("Clear ServiceRequests"));
-            _manager.clearLocalServices(_channel, new WifiActionListener("Clear LocalServices"));
+            mRecordMap.put(NAME_RECORD, name);
+            mRecordMap.put(TOPIC_RECORD, serializedTopic);
+            mRecordMap.put(TYPE_RECORD, serializedType);
+            mRecordMap.put(SENDER_RECORD, serializedSender);
+            mRecordMap.put(APPROVERS_RECORD, serializedApprovers);
+            mRecordMap.put(RECEIVER_RECORD, serializedReceiver);
+            mRecordMap.put(LOCATION_RECORD, serializedLocation);
+            mRecordMap.put(TIME_RECORD, serializedTime);
+            mRecordMap.put(DIRECTION_RECORD, String.valueOf(direction));
 
-            initAdvertising();
+            mServiceInfo =
+                    WifiP2pDnsSdServiceInfo.newInstance("_sbc", "_presence._tcp", mRecordMap);
+
+            mManager.addLocalService(mChannel, mServiceInfo,
+                    new WifiActionListener("Add LocalService"));
+
+            mManager.clearServiceRequests(mChannel,
+                    new WifiActionListener("Clear ServiceRequests"));
 
             WifiP2pDnsSdServiceRequest serviceRequest = WifiP2pDnsSdServiceRequest.newInstance();
-            _manager.addServiceRequest(_channel, serviceRequest, new WifiActionListener("Add ServiceRequest"));
 
-            _handler.post(this);
-        } else {
-            start();
+            mManager.addServiceRequest(mChannel, serviceRequest,
+                    new WifiActionListener("Add ServiceRequest"));
+
+            mHandler.post(this);
+
+            mState = WIFI_STATE.DISCOVERING;
+            mIsDiscovering = true;
+
         }
+
     }
 
-    private void initAdvertising(){
-        _manager.clearLocalServices(_channel, new WifiActionListener("Clear LocalServices"));
+    public void stopAdvertising(){
+        if(mIsDiscovering){
+            mHandler.removeCallbacks(this);
+            mManager.clearServiceRequests(mChannel,
+                    new WifiActionListener("Clear ServiceRequests"));
+            mManager.removeLocalService(mChannel, mServiceInfo,
+                    new WifiActionListener("Remove LocalService"));
+            mManager.clearLocalServices(mChannel,
+                    new WifiActionListener("Clear LocalServices"));
 
-        String interest = "";
-        String name = "";
+            if(mIsReceiverRegistered){
+                mContext.unregisterReceiver(this);
+                mIsReceiverRegistered = false;
+            }
+
+            mState = WIFI_STATE.INIT;
+            mIsDiscovering = false;
+        }
+
+        if(mIsReceiverRegistered){
+            mContext.unregisterReceiver(this);
+            mIsReceiverRegistered = false;
+        }
+
+    }
+
+    public void connect(List<PeerSemanticTag> peers){
+
+    }
+
+    public void connect(PeerSemanticTag peer){
+        final WifiP2pConfig config = new WifiP2pConfig();
+        for(String addr : peer.getAddresses()){
+            if(addr.startsWith("WIFI://")){
+                config.deviceAddress = addr;
+            }
+        }
+        config.wps.setup = WpsInfo.PBC;
+        mManager.connect(mChannel, config, new WifiActionListener("Init Connection"));
+    }
+
+
+    // Implemented methods
+    //
+    //
+
+    @Override
+    public void onDnsSdTxtRecordAvailable(String fullDomainName,
+                                          Map<String, String> txtRecordMap,
+                                          WifiP2pDevice srcDevice) {
+
+        if(srcDevice == null || txtRecordMap.isEmpty()) return;
+
+        if(!txtRecordMap.containsKey(WifiDirectManager.NAME_RECORD) ||
+                !txtRecordMap.containsKey(WifiDirectManager.SENDER_RECORD)){
+            return;
+        }
+
+        ASIPInterest interest = new InMemoInterest();
+        String addr = "WIFI://" + srcDevice.deviceAddress;
+
+        STSet topics = null;
+        STSet types = null;
+        PeerSemanticTag sender = null;
+        PeerSTSet approver = null;
+        PeerSTSet receiver = null;
+        SpatialSTSet locations = null;
+        TimeSTSet times = null;
+        int direction = -1;
 
         try {
-            interest = ASIPSerializer.serializeASIPSpace(mInterest).toString();
-            L.d(interest, this);
+            topics = ASIPSerializer.deserializeAnySTSet(null,
+                    String.valueOf(txtRecordMap.get(WifiDirectManager.TOPIC_RECORD)));
+            types = ASIPSerializer.deserializeAnySTSet(null,
+                    String.valueOf(txtRecordMap.get(WifiDirectManager.TYPE_RECORD)));
+            sender = ASIPSerializer.deserializePeerTag(
+                    String.valueOf(txtRecordMap.get(WifiDirectManager.SENDER_RECORD)));
+            approver = ASIPSerializer.deserializePeerSTSet(null,
+                    String.valueOf(txtRecordMap.get(WifiDirectManager.APPROVERS_RECORD)));
+            receiver = ASIPSerializer.deserializePeerSTSet(null,
+                    String.valueOf(txtRecordMap.get(WifiDirectManager.RECEIVER_RECORD)));
+            locations = ASIPSerializer.deserializeSpatialSTSet(null,
+                    String.valueOf(txtRecordMap.get(WifiDirectManager.LOCATION_RECORD)));
+            times = ASIPSerializer.deserializeTimeSTSet(null,
+                    String.valueOf(txtRecordMap.get(WifiDirectManager.TIME_RECORD)));
+            direction = Integer.getInteger(txtRecordMap.get(WifiDirectManager.DIRECTION_RECORD));
         } catch (SharkKBException e) {
             e.printStackTrace();
         }
-        if(mSender ==null || mSender.isEmpty()){
-            name = "A";
-        } else {
-            name = mSender;
+
+        // Set Wifi-Address to sender
+
+        sender.addAddress(addr);
+
+        interest.setTopics(topics);
+        interest.setTypes(types);
+        interest.setSender(sender);
+        interest.setApprovers(approver);
+        interest.setReceivers(receiver);
+        interest.setLocations(locations);
+        interest.setTimes(times);
+        interest.setDirection(direction);
+
+        // Inform Listener
+
+        for(WifiDirectPeerListener listener : mPeerListeners){
+            listener.onNewPeer(sender);
+            listener.onNewInterest(interest);
         }
-        _map.put("interest", interest);
-        _map.put("name", name);
 
-        _serviceInfo = WifiP2pDnsSdServiceInfo.newInstance("_sbc", "_presence._tcp", _map);
-        _manager.addLocalService(_channel, _serviceInfo, new WifiActionListener("Add LocalService"));
     }
 
-    public void connect(WifiDirectPeer peer){
-        final WifiP2pConfig config = new WifiP2pConfig();
-        config.deviceAddress = peer.deviceAddress;
-        config.wps.setup = WpsInfo.PBC;
-        _manager.connect(_channel, config, new WifiP2pManager.ActionListener() {
-            @Override
-            public void onSuccess() {
-            }
+    @Override
+    public void onConnectionInfoAvailable(WifiP2pInfo info) {
 
-            @Override
-            public void onFailure(int reason) {
-            }
-        });
-        _status = CONNECTING;
-    }
-
-    public void disconnect(){
-        final Runnable that = this;
-        _manager.requestGroupInfo(_channel, new WifiP2pManager.GroupInfoListener() {
-            @Override
-            public void onGroupInfoAvailable(WifiP2pGroup group) {
-                if(group==null) return;
-                if(group.isGroupOwner()){
-                    _manager.removeGroup(_channel, new WifiActionListener("Remove Group"));
-                    _handler.postDelayed(that, _INTERVALL);
-                }
-            }
-        });
-    }
-
-    public void offerInterest(ASIPSpace space) {
-        mInterest = space;
-        mSender = space.getSender().getName();
-//        resetDNSMap();
     }
 
     @Override
     public void onReceive(Context context, Intent intent) {
         String action = intent.getAction();
 
-        if(_manager==null)
+        if(mManager == null)
             return;
 
         if (WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION.equals(action)) {
             int state = intent.getIntExtra(WifiP2pManager.EXTRA_WIFI_STATE, -1);
             if (state == WifiP2pManager.WIFI_P2P_STATE_ENABLED) {
-//                setIsWifiP2pEnabled(true);
             } else {
-//                setIsWifiP2pEnabled(false);
             }
         } else if (WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION.equals(action)) {
-//            _manager.requestPeers(_channel, _stub);
         } else if (WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION.equals(action)) {
-
         } else if (WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION.equals(action)) {
-            NetworkInfo networkInfo = (NetworkInfo) intent.getParcelableExtra(WifiP2pManager.EXTRA_NETWORK_INFO);
-//            L.d("Network: " + networkInfo, this);
+            NetworkInfo networkInfo = intent.getParcelableExtra(WifiP2pManager.EXTRA_NETWORK_INFO);
             if(networkInfo.isConnected()){
-                _status = CONNECTED;
-                _manager.requestConnectionInfo(_channel, _stub);
+                mState = WIFI_STATE.CONNECTED;
+                mManager.requestConnectionInfo(mChannel, this);
             } else {
-                if(_status==CONNECTED){
-                    _stub.onDisconnected();
-//                    start();
-
-                }
-                _status = DISCOVERING;
+                mState = WIFI_STATE.DISCOVERING;
             }
         }
     }
 
-    public void requestGroupInfo(WifiP2pManager.GroupInfoListener listener) {
-        _manager.requestGroupInfo(_channel, listener);
+    private Handler mHandler = new Handler();
+
+    @Override
+    public void run() {
+
     }
 
-    public int getStatus() {
-        return _status;
-    }
 }

@@ -1,4 +1,4 @@
-package net.sharksystem.android.protocols.wifidirect;
+package net.sharksystem.android.ports;
 
 import net.sharkfw.asip.ASIPInterest;
 import net.sharkfw.asip.ASIPKnowledge;
@@ -8,6 +8,7 @@ import net.sharkfw.knowledgeBase.SharkKBException;
 import net.sharkfw.kp.FilterKP;
 import net.sharkfw.peer.SharkEngine;
 import net.sharkfw.system.L;
+import net.sharksystem.android.protocols.wifidirect_obsolete.WifiDirectBroadcastManager;
 
 /**
  * Created by j4rvis on 31.05.16.

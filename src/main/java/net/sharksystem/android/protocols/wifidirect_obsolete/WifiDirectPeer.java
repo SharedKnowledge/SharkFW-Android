@@ -1,4 +1,4 @@
-package net.sharksystem.android.protocols.wifidirect;
+package net.sharksystem.android.protocols.wifidirect_obsolete;
 
 import android.net.wifi.p2p.WifiP2pDevice;
 
@@ -6,13 +6,11 @@ import net.sharkfw.asip.ASIPInterest;
 import net.sharkfw.asip.engine.ASIPSerializer;
 import net.sharkfw.knowledgeBase.PeerSemanticTag;
 import net.sharkfw.knowledgeBase.SharkKBException;
-import net.sharkfw.knowledgeBase.inmemory.InMemoSharkKB;
-import net.sharkfw.system.L;
 
 import java.util.Map;
 
 /**
- * Created by micha on 28.01.16.
+ * Created by j4rvis on 28.01.16.
  */
 public class WifiDirectPeer extends WifiP2pDevice implements Comparable<WifiDirectPeer> {
 

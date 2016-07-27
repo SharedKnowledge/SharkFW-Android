@@ -1,4 +1,4 @@
-package net.sharksystem.android.protocols.wifidirect;
+package net.sharksystem.android.protocols.wifidirect_obsolete;
 
 /*
  * Copyright (c) 2012, AllSeen Alliance. All rights reserved.

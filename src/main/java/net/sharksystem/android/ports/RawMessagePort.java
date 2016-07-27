@@ -1,4 +1,4 @@
-package net.sharksystem.android.protocols.wifidirect;
+package net.sharksystem.android.ports;
 
 import net.sharkfw.asip.engine.ASIPConnection;
 import net.sharkfw.asip.engine.ASIPInMessage;
@@ -6,7 +6,6 @@ import net.sharkfw.asip.engine.ASIPMessage;
 import net.sharkfw.kp.KPNotifier;
 import net.sharkfw.peer.ContentPort;
 import net.sharkfw.peer.SharkEngine;
-import net.sharkfw.system.L;
 
 import java.io.InputStream;
 import java.util.ArrayList;

@@ -1,4 +1,4 @@
-package net.sharksystem.android.protocols.wifidirect;
+package net.sharksystem.android.protocols.wifidirect_obsolete;
 
 import android.annotation.TargetApi;
 import android.content.Context;
@@ -15,11 +15,10 @@ import android.widget.Toast;
 import net.sharkfw.system.L;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
 /**
- * Created by micha on 28.01.16.
+ * Created by j4rvis on 28.01.16.
  */
 @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
 public class WifiDirectListener

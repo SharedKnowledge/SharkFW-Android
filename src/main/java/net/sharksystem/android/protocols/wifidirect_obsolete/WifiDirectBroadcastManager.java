@@ -1,4 +1,4 @@
-package net.sharksystem.android.protocols.wifidirect;
+package net.sharksystem.android.protocols.wifidirect_obsolete;
 
 import android.content.Context;
 import android.net.wifi.p2p.WifiP2pDevice;

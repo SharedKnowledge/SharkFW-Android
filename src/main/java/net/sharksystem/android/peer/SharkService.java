@@ -20,8 +20,8 @@ import net.sharkfw.kp.KPNotifier;
 import net.sharkfw.peer.ASIPPort;
 import net.sharkfw.system.L;
 import net.sharksystem.android.protocols.routing.RouterKP;
-import net.sharksystem.android.protocols.wifidirect.RawMessagePort;
-import net.sharksystem.android.protocols.wifidirect.RadarKP;
+import net.sharksystem.android.ports.RawMessagePort;
+import net.sharksystem.android.ports.RadarKP;
 
 import java.io.BufferedReader;
 import java.io.IOException;

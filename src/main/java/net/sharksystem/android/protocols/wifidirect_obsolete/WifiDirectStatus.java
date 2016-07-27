@@ -1,7 +1,7 @@
-package net.sharksystem.android.protocols.wifidirect;
+package net.sharksystem.android.protocols.wifidirect_obsolete;
 
 /**
- * Created by micha on 03.02.16.
+ * Created by j4rvis on 03.02.16.
  */
 public interface WifiDirectStatus {
 

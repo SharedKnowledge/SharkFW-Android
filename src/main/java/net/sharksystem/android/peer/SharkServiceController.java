@@ -10,7 +10,7 @@ import android.util.Log;
 
 import net.sharkfw.asip.ASIPInterest;
 import net.sharkfw.asip.ASIPKnowledge;
-import net.sharksystem.android.protocols.wifidirect.WifiDirectPeer;
+import net.sharksystem.android.protocols.wifidirect_obsolete.WifiDirectPeer;
 
 import java.util.concurrent.CopyOnWriteArrayList;
 

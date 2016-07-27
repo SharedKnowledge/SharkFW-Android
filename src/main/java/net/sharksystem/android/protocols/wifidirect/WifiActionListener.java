@@ -5,7 +5,7 @@ import android.net.wifi.p2p.WifiP2pManager;
 import net.sharkfw.system.L;
 
 /**
- * Created by micha on 28.01.16.
+ * Created by j4rvis on 28.01.16.
  */
 public class WifiActionListener implements WifiP2pManager.ActionListener {
 
