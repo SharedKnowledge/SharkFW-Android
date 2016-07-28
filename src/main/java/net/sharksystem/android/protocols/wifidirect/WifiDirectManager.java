@@ -169,47 +169,7 @@ public class WifiDirectManager
 
             mManager.clearLocalServices(mChannel, new WifiActionListener("Clear LocalServices"));
 
-            String serializedTopic = null;
-            String serializedType = null;
-            String serializedSender = null;
-            String serializedApprovers = null;
-            String serializedReceiver = null;
-            String serializedLocation = null;
-            String serializedTime = null;
-            int direction = -1;
-            String name;
-
-            try {
-
-                serializedTopic = ASIPSerializer.serializeSTSet(space.getTopics()).toString();
-                serializedType = ASIPSerializer.serializeSTSet(space.getTypes()).toString();
-                serializedSender = ASIPSerializer.serializeTag(space.getSender()).toString();
-                serializedApprovers = ASIPSerializer.serializeSTSet(space.getApprovers()).toString();
-                serializedReceiver = ASIPSerializer.serializeSTSet(space.getReceivers()).toString();
-                serializedLocation = ASIPSerializer.serializeSTSet(space.getLocations()).toString();
-                serializedTime = ASIPSerializer.serializeSTSet(space.getTimes()).toString();
-                direction = space.getDirection();
-
-            } catch (SharkKBException e) {
-                e.printStackTrace();
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-
-            name = space.getSender().getName();
-            if(name.isEmpty()) {
-                name = "A";
-            }
-
-            map.put(NAME_RECORD, name);
-            map.put(TOPIC_RECORD, serializedTopic);
-            map.put(TYPE_RECORD, serializedType);
-            map.put(SENDER_RECORD, serializedSender);
-            map.put(APPROVERS_RECORD, serializedApprovers);
-            map.put(RECEIVER_RECORD, serializedReceiver);
-            map.put(LOCATION_RECORD, serializedLocation);
-            map.put(TIME_RECORD, serializedTime);
-            map.put(DIRECTION_RECORD, String.valueOf(direction));
+            HashMap<String, String> map = interest2RecordMap((ASIPInterest) space);
 
             mServiceInfo =
                     WifiP2pDnsSdServiceInfo.newInstance("_sbc", "_presence._tcp", map);
@@ -324,7 +284,7 @@ public class WifiDirectManager
         return map;
     }
 
-    public ASIPInterest recordMap2Interest(HashMap<String, String> map) throws SharkKBException {
+    public ASIPInterest recordMap2Interest(Map<String, String> map) throws SharkKBException {
 
         ASIPInterest interest = InMemoSharkKB.createInMemoASIPInterest();
 
@@ -370,7 +330,7 @@ public class WifiDirectManager
         return interest;
     }
 
-    public boolean isValidRecordMap(HashMap<String, String> map){
+    public boolean isValidRecordMap(Map<String, String> map){
         if(map.containsKey(WifiDirectManager.NAME_RECORD)
                 && map.containsKey(WifiDirectManager.TOPIC_RECORD)){
             return true;
@@ -378,7 +338,6 @@ public class WifiDirectManager
             return false;
         }
     }
-
 
     public void connect(List<PeerSemanticTag> peers){
 
@@ -407,55 +366,22 @@ public class WifiDirectManager
 
         if(srcDevice == null || txtRecordMap.isEmpty()) return;
 
-        if(!txtRecordMap.containsKey(WifiDirectManager.NAME_RECORD) ||
-                !txtRecordMap.containsKey(WifiDirectManager.SENDER_RECORD)){
+        if(isValidRecordMap(txtRecordMap)){
             return;
         }
 
-        ASIPInterest interest = new InMemoInterest();
         String addr = "WIFI://" + srcDevice.deviceAddress;
 
-        STSet topics = null;
-        STSet types = null;
-        PeerSemanticTag sender = null;
-        PeerSTSet approver = null;
-        PeerSTSet receiver = null;
-        SpatialSTSet locations = null;
-        TimeSTSet times = null;
-        int direction = -1;
-
+        ASIPInterest interest = null;
         try {
-            topics = ASIPSerializer.deserializeAnySTSet(null,
-                    String.valueOf(txtRecordMap.get(WifiDirectManager.TOPIC_RECORD)));
-            types = ASIPSerializer.deserializeAnySTSet(null,
-                    String.valueOf(txtRecordMap.get(WifiDirectManager.TYPE_RECORD)));
-            sender = ASIPSerializer.deserializePeerTag(
-                    String.valueOf(txtRecordMap.get(WifiDirectManager.SENDER_RECORD)));
-            approver = ASIPSerializer.deserializePeerSTSet(null,
-                    String.valueOf(txtRecordMap.get(WifiDirectManager.APPROVERS_RECORD)));
-            receiver = ASIPSerializer.deserializePeerSTSet(null,
-                    String.valueOf(txtRecordMap.get(WifiDirectManager.RECEIVER_RECORD)));
-            locations = ASIPSerializer.deserializeSpatialSTSet(null,
-                    String.valueOf(txtRecordMap.get(WifiDirectManager.LOCATION_RECORD)));
-            times = ASIPSerializer.deserializeTimeSTSet(null,
-                    String.valueOf(txtRecordMap.get(WifiDirectManager.TIME_RECORD)));
-            direction = Integer.getInteger(txtRecordMap.get(WifiDirectManager.DIRECTION_RECORD));
+            interest = recordMap2Interest(txtRecordMap);
         } catch (SharkKBException e) {
             e.printStackTrace();
         }
 
-        // Set Wifi-Address to sender
+        interest.getSender().addAddress(addr);
 
-        sender.addAddress(addr);
-
-        interest.setTopics(topics);
-        interest.setTypes(types);
-        interest.setSender(sender);
-        interest.setApprovers(approver);
-        interest.setReceivers(receiver);
-        interest.setLocations(locations);
-        interest.setTimes(times);
-        interest.setDirection(direction);
+        PeerSemanticTag sender = interest.getSender();
 
         // Inform Listener
 
