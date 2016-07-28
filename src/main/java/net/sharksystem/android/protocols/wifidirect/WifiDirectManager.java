@@ -24,6 +24,7 @@ import net.sharkfw.knowledgeBase.SharkKBException;
 import net.sharkfw.knowledgeBase.SpatialSTSet;
 import net.sharkfw.knowledgeBase.TimeSTSet;
 import net.sharkfw.knowledgeBase.inmemory.InMemoInterest;
+import net.sharkfw.knowledgeBase.inmemory.InMemoSharkKB;
 import net.sharksystem.android.Application;
 
 import org.json.JSONException;
@@ -137,7 +138,7 @@ public class WifiDirectManager
     //
     //
 
-    HashMap<String, String> mRecordMap = new HashMap<>();
+    HashMap<String, String> map = new HashMap<>();
 
     final static String TOPIC_RECORD = "TO";
     final static String TYPE_RECORD = "TY";
@@ -200,18 +201,18 @@ public class WifiDirectManager
                 name = "A";
             }
 
-            mRecordMap.put(NAME_RECORD, name);
-            mRecordMap.put(TOPIC_RECORD, serializedTopic);
-            mRecordMap.put(TYPE_RECORD, serializedType);
-            mRecordMap.put(SENDER_RECORD, serializedSender);
-            mRecordMap.put(APPROVERS_RECORD, serializedApprovers);
-            mRecordMap.put(RECEIVER_RECORD, serializedReceiver);
-            mRecordMap.put(LOCATION_RECORD, serializedLocation);
-            mRecordMap.put(TIME_RECORD, serializedTime);
-            mRecordMap.put(DIRECTION_RECORD, String.valueOf(direction));
+            map.put(NAME_RECORD, name);
+            map.put(TOPIC_RECORD, serializedTopic);
+            map.put(TYPE_RECORD, serializedType);
+            map.put(SENDER_RECORD, serializedSender);
+            map.put(APPROVERS_RECORD, serializedApprovers);
+            map.put(RECEIVER_RECORD, serializedReceiver);
+            map.put(LOCATION_RECORD, serializedLocation);
+            map.put(TIME_RECORD, serializedTime);
+            map.put(DIRECTION_RECORD, String.valueOf(direction));
 
             mServiceInfo =
-                    WifiP2pDnsSdServiceInfo.newInstance("_sbc", "_presence._tcp", mRecordMap);
+                    WifiP2pDnsSdServiceInfo.newInstance("_sbc", "_presence._tcp", map);
 
             mManager.addLocalService(mChannel, mServiceInfo,
                     new WifiActionListener("Add LocalService"));
@@ -258,6 +259,126 @@ public class WifiDirectManager
         }
 
     }
+
+    public HashMap<String, String> interest2RecordMap(ASIPInterest space){
+
+        HashMap<String, String> map = new HashMap<>();
+
+        String serializedTopic = "";
+        String serializedType = "";
+        String serializedSender = "";
+        String serializedApprovers = "";
+        String serializedReceiver = "";
+        String serializedLocation = "";
+        String serializedTime = "";
+        int direction = -1;
+        String name = "";
+
+        try {
+
+            if(space.getTopics() != null){
+                serializedTopic = ASIPSerializer.serializeSTSet(space.getTopics()).toString();
+            }
+            if(space.getTypes() == null){
+                serializedType = ASIPSerializer.serializeSTSet(space.getTypes()).toString();
+            }
+            if(space.getSender() == null){
+                serializedSender = ASIPSerializer.serializeTag(space.getSender()).toString();
+                name = space.getSender().getName();
+                if(name.isEmpty()) {
+                    name = "A";
+                }
+            }
+            if(space.getApprovers() == null){
+                serializedApprovers = ASIPSerializer.serializeSTSet(space.getApprovers()).toString();
+            }
+            if(space.getReceivers() == null){
+                serializedReceiver = ASIPSerializer.serializeSTSet(space.getReceivers()).toString();
+            }
+            if(space.getLocations() == null){
+                serializedLocation = ASIPSerializer.serializeSTSet(space.getLocations()).toString();
+            }
+            if(space.getTimes() == null){
+                serializedTime = ASIPSerializer.serializeSTSet(space.getTimes()).toString();
+            }
+            if(space.getDirection() < 0){
+                direction = space.getDirection();
+            }
+
+        } catch (SharkKBException e) {
+            e.printStackTrace();
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        map.put(NAME_RECORD, name);
+        map.put(TOPIC_RECORD, serializedTopic);
+        map.put(TYPE_RECORD, serializedType);
+        map.put(SENDER_RECORD, serializedSender);
+        map.put(APPROVERS_RECORD, serializedApprovers);
+        map.put(RECEIVER_RECORD, serializedReceiver);
+        map.put(LOCATION_RECORD, serializedLocation);
+        map.put(TIME_RECORD, serializedTime);
+        map.put(DIRECTION_RECORD, String.valueOf(direction));
+
+        return map;
+    }
+
+    public ASIPInterest recordMap2Interest(HashMap<String, String> map) throws SharkKBException {
+
+        ASIPInterest interest = InMemoSharkKB.createInMemoASIPInterest();
+
+        interest.setTopics(InMemoSharkKB.createInMemoSTSet());
+        interest.setTypes(InMemoSharkKB.createInMemoSTSet());
+        interest.setApprovers(InMemoSharkKB.createInMemoPeerSTSet());
+        interest.setReceivers(InMemoSharkKB.createInMemoPeerSTSet());
+        interest.setLocations(InMemoSharkKB.createInMemoSpatialSTSet());
+        interest.setTimes(InMemoSharkKB.createInMemoTimeSTSet());
+
+        if(map.containsKey(WifiDirectManager.TOPIC_RECORD)){
+            String record = map.get(WifiDirectManager.TOPIC_RECORD);
+            interest.getTopics().merge(ASIPSerializer.deserializeSTSet(record));
+        }
+        if(map.containsKey(WifiDirectManager.TYPE_RECORD)){
+            String record = map.get(WifiDirectManager.TYPE_RECORD);
+            interest.getTypes().merge(ASIPSerializer.deserializeSTSet(record));
+        }
+        if(map.containsKey(WifiDirectManager.SENDER_RECORD)){
+            String record = map.get(WifiDirectManager.SENDER_RECORD);
+            interest.setSender(ASIPSerializer.deserializePeerTag(record));
+        }
+        if(map.containsKey(WifiDirectManager.APPROVERS_RECORD)){
+            String record = map.get(WifiDirectManager.APPROVERS_RECORD);
+            interest.getApprovers().merge(ASIPSerializer.deserializePeerSTSet(null, record));
+        }
+        if(map.containsKey(WifiDirectManager.RECEIVER_RECORD)){
+            String record = map.get(WifiDirectManager.RECEIVER_RECORD);
+            interest.getReceivers().merge(ASIPSerializer.deserializePeerSTSet(null, record));
+        }
+        if(map.containsKey(WifiDirectManager.LOCATION_RECORD)){
+            String record = map.get(WifiDirectManager.LOCATION_RECORD);
+            interest.getLocations().merge(ASIPSerializer.deserializeSpatialSTSet(null, record));
+        }
+        if(map.containsKey(WifiDirectManager.TIME_RECORD)){
+            String record = map.get(WifiDirectManager.TIME_RECORD);
+            interest.getTimes().merge(ASIPSerializer.deserializeTimeSTSet(null, record));
+        }
+        if(map.containsKey(WifiDirectManager.DIRECTION_RECORD)){
+            int record = Integer.getInteger(map.get(WifiDirectManager.DIRECTION_RECORD));
+            interest.setDirection(record);
+        }
+        return interest;
+    }
+
+    public boolean isValidRecordMap(HashMap<String, String> map){
+        if(map.containsKey(WifiDirectManager.NAME_RECORD)
+                && map.containsKey(WifiDirectManager.TOPIC_RECORD)){
+            return true;
+        } else {
+            return false;
+        }
+    }
+
 
     public void connect(List<PeerSemanticTag> peers){
 
