@@ -8,6 +8,7 @@ import android.net.NetworkInfo;
 import android.net.wifi.WpsInfo;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
+import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceInfo;
@@ -17,13 +18,8 @@ import android.os.Handler;
 import net.sharkfw.asip.ASIPInterest;
 import net.sharkfw.asip.ASIPSpace;
 import net.sharkfw.asip.engine.ASIPSerializer;
-import net.sharkfw.knowledgeBase.PeerSTSet;
 import net.sharkfw.knowledgeBase.PeerSemanticTag;
-import net.sharkfw.knowledgeBase.STSet;
 import net.sharkfw.knowledgeBase.SharkKBException;
-import net.sharkfw.knowledgeBase.SpatialSTSet;
-import net.sharkfw.knowledgeBase.TimeSTSet;
-import net.sharkfw.knowledgeBase.inmemory.InMemoInterest;
 import net.sharkfw.knowledgeBase.inmemory.InMemoSharkKB;
 import net.sharksystem.android.Application;
 
@@ -60,9 +56,10 @@ public class WifiDirectManager
 
     private final WifiP2pManager mManager;
     private final WifiP2pManager.Channel mChannel;
-    private WifiDirectStreamStub mStub = null;
 
     private Context mContext = null;
+
+    private final int DISCOVERY_INTERVALL = 10000;
 
     // Interfaces
     //
@@ -73,7 +70,7 @@ public class WifiDirectManager
         void onNewPeer(PeerSemanticTag peers);
     }
     interface WifiDirectNetworkListener {
-        void onNetworkCreated(List<PeerSemanticTag> connectedPeers);
+        void onNetworkCreated(WifiP2pInfo info, WifiP2pGroup group);
         void onNetworkDestroyed();
     }
 
@@ -106,10 +103,6 @@ public class WifiDirectManager
     private List<WifiDirectPeerListener> mPeerListeners = new ArrayList<>();
     private List<WifiDirectNetworkListener> mNetworkListeners = new ArrayList<>();
 
-    public void setWifiDirectStreamStub(WifiDirectStreamStub stub){
-        mStub = stub;
-    }
-
     public void addPeerListener(WifiDirectPeerListener listener){
         if(!mPeerListeners.contains(listener)){
             mPeerListeners.add(listener);
@@ -138,20 +131,6 @@ public class WifiDirectManager
     //
     //
 
-    HashMap<String, String> map = new HashMap<>();
-
-    final static String TOPIC_RECORD = "TO";
-    final static String TYPE_RECORD = "TY";
-    final static String SENDER_RECORD = "SE";
-    final static String APPROVERS_RECORD = "AP";
-    final static String RECEIVER_RECORD = "RE";
-    final static String LOCATION_RECORD = "LO";
-    final static String TIME_RECORD = "TI";
-    final static String DIRECTION_RECORD = "DI";
-
-    final static String NAME_RECORD = "NAME";
-
-
     public void startAdvertising(ASIPSpace space){
 
         if(!mIsDiscovering){
@@ -169,7 +148,7 @@ public class WifiDirectManager
 
             mManager.clearLocalServices(mChannel, new WifiActionListener("Clear LocalServices"));
 
-            HashMap<String, String> map = interest2RecordMap((ASIPInterest) space);
+            HashMap<String, String> map = WifiDirectUtil.interest2RecordMap((ASIPInterest) space);
 
             mServiceInfo =
                     WifiP2pDnsSdServiceInfo.newInstance("_sbc", "_presence._tcp", map);
@@ -220,125 +199,6 @@ public class WifiDirectManager
 
     }
 
-    public HashMap<String, String> interest2RecordMap(ASIPInterest space){
-
-        HashMap<String, String> map = new HashMap<>();
-
-        String serializedTopic = "";
-        String serializedType = "";
-        String serializedSender = "";
-        String serializedApprovers = "";
-        String serializedReceiver = "";
-        String serializedLocation = "";
-        String serializedTime = "";
-        int direction = -1;
-        String name = "";
-
-        try {
-
-            if(space.getTopics() != null){
-                serializedTopic = ASIPSerializer.serializeSTSet(space.getTopics()).toString();
-            }
-            if(space.getTypes() == null){
-                serializedType = ASIPSerializer.serializeSTSet(space.getTypes()).toString();
-            }
-            if(space.getSender() == null){
-                serializedSender = ASIPSerializer.serializeTag(space.getSender()).toString();
-                name = space.getSender().getName();
-                if(name.isEmpty()) {
-                    name = "A";
-                }
-            }
-            if(space.getApprovers() == null){
-                serializedApprovers = ASIPSerializer.serializeSTSet(space.getApprovers()).toString();
-            }
-            if(space.getReceivers() == null){
-                serializedReceiver = ASIPSerializer.serializeSTSet(space.getReceivers()).toString();
-            }
-            if(space.getLocations() == null){
-                serializedLocation = ASIPSerializer.serializeSTSet(space.getLocations()).toString();
-            }
-            if(space.getTimes() == null){
-                serializedTime = ASIPSerializer.serializeSTSet(space.getTimes()).toString();
-            }
-            if(space.getDirection() < 0){
-                direction = space.getDirection();
-            }
-
-        } catch (SharkKBException e) {
-            e.printStackTrace();
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-
-        map.put(NAME_RECORD, name);
-        map.put(TOPIC_RECORD, serializedTopic);
-        map.put(TYPE_RECORD, serializedType);
-        map.put(SENDER_RECORD, serializedSender);
-        map.put(APPROVERS_RECORD, serializedApprovers);
-        map.put(RECEIVER_RECORD, serializedReceiver);
-        map.put(LOCATION_RECORD, serializedLocation);
-        map.put(TIME_RECORD, serializedTime);
-        map.put(DIRECTION_RECORD, String.valueOf(direction));
-
-        return map;
-    }
-
-    public ASIPInterest recordMap2Interest(Map<String, String> map) throws SharkKBException {
-
-        ASIPInterest interest = InMemoSharkKB.createInMemoASIPInterest();
-
-        interest.setTopics(InMemoSharkKB.createInMemoSTSet());
-        interest.setTypes(InMemoSharkKB.createInMemoSTSet());
-        interest.setApprovers(InMemoSharkKB.createInMemoPeerSTSet());
-        interest.setReceivers(InMemoSharkKB.createInMemoPeerSTSet());
-        interest.setLocations(InMemoSharkKB.createInMemoSpatialSTSet());
-        interest.setTimes(InMemoSharkKB.createInMemoTimeSTSet());
-
-        if(map.containsKey(WifiDirectManager.TOPIC_RECORD)){
-            String record = map.get(WifiDirectManager.TOPIC_RECORD);
-            interest.getTopics().merge(ASIPSerializer.deserializeSTSet(record));
-        }
-        if(map.containsKey(WifiDirectManager.TYPE_RECORD)){
-            String record = map.get(WifiDirectManager.TYPE_RECORD);
-            interest.getTypes().merge(ASIPSerializer.deserializeSTSet(record));
-        }
-        if(map.containsKey(WifiDirectManager.SENDER_RECORD)){
-            String record = map.get(WifiDirectManager.SENDER_RECORD);
-            interest.setSender(ASIPSerializer.deserializePeerTag(record));
-        }
-        if(map.containsKey(WifiDirectManager.APPROVERS_RECORD)){
-            String record = map.get(WifiDirectManager.APPROVERS_RECORD);
-            interest.getApprovers().merge(ASIPSerializer.deserializePeerSTSet(null, record));
-        }
-        if(map.containsKey(WifiDirectManager.RECEIVER_RECORD)){
-            String record = map.get(WifiDirectManager.RECEIVER_RECORD);
-            interest.getReceivers().merge(ASIPSerializer.deserializePeerSTSet(null, record));
-        }
-        if(map.containsKey(WifiDirectManager.LOCATION_RECORD)){
-            String record = map.get(WifiDirectManager.LOCATION_RECORD);
-            interest.getLocations().merge(ASIPSerializer.deserializeSpatialSTSet(null, record));
-        }
-        if(map.containsKey(WifiDirectManager.TIME_RECORD)){
-            String record = map.get(WifiDirectManager.TIME_RECORD);
-            interest.getTimes().merge(ASIPSerializer.deserializeTimeSTSet(null, record));
-        }
-        if(map.containsKey(WifiDirectManager.DIRECTION_RECORD)){
-            int record = Integer.getInteger(map.get(WifiDirectManager.DIRECTION_RECORD));
-            interest.setDirection(record);
-        }
-        return interest;
-    }
-
-    public boolean isValidRecordMap(Map<String, String> map){
-        if(map.containsKey(WifiDirectManager.NAME_RECORD)
-                && map.containsKey(WifiDirectManager.TOPIC_RECORD)){
-            return true;
-        } else {
-            return false;
-        }
-    }
-
     public void connect(List<PeerSemanticTag> peers){
 
     }
@@ -352,6 +212,7 @@ public class WifiDirectManager
         }
         config.wps.setup = WpsInfo.PBC;
         mManager.connect(mChannel, config, new WifiActionListener("Init Connection"));
+        mState = WIFI_STATE.CONNECTING;
     }
 
 
@@ -366,7 +227,7 @@ public class WifiDirectManager
 
         if(srcDevice == null || txtRecordMap.isEmpty()) return;
 
-        if(isValidRecordMap(txtRecordMap)){
+        if(WifiDirectUtil.isValidRecordMap(txtRecordMap)){
             return;
         }
 
@@ -374,7 +235,7 @@ public class WifiDirectManager
 
         ASIPInterest interest = null;
         try {
-            interest = recordMap2Interest(txtRecordMap);
+            interest = WifiDirectUtil.recordMap2Interest(txtRecordMap);
         } catch (SharkKBException e) {
             e.printStackTrace();
         }
@@ -393,8 +254,15 @@ public class WifiDirectManager
     }
 
     @Override
-    public void onConnectionInfoAvailable(WifiP2pInfo info) {
-
+    public void onConnectionInfoAvailable(final WifiP2pInfo info) {
+        mManager.requestGroupInfo(mChannel, new WifiP2pManager.GroupInfoListener() {
+            @Override
+            public void onGroupInfoAvailable(WifiP2pGroup group) {
+                for(WifiDirectNetworkListener listener : mNetworkListeners){
+                    listener.onNetworkCreated(info, group);
+                }
+            }
+        });
     }
 
     @Override
@@ -426,7 +294,8 @@ public class WifiDirectManager
 
     @Override
     public void run() {
-
+        mManager.discoverServices(mChannel, new WifiActionListener("Discover Services"));
+        mHandler.postDelayed(this, DISCOVERY_INTERVALL);
     }
 
 }
