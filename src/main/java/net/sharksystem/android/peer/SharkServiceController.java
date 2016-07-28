@@ -10,6 +10,7 @@ import android.util.Log;
 
 import net.sharkfw.asip.ASIPInterest;
 import net.sharkfw.asip.ASIPKnowledge;
+import net.sharkfw.system.L;
 import net.sharksystem.android.protocols.wifidirect_obsolete.WifiDirectPeer;
 
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -115,15 +116,15 @@ public class SharkServiceController implements ServiceConnection, KPListener {
     public void onNewInterest(ASIPInterest interest) {
         WifiDirectPeer newPeer = new WifiDirectPeer(interest.getSender(), interest);
 
-        if (mPeers.contains(newPeer)) {
-            WifiDirectPeer peer = mPeers.get(mPeers.indexOf(newPeer));
-            if (peer.getLastUpdated() < newPeer.getLastUpdated()) {
+        L.d("Whoa new Interest! " + newPeer.getName() + " " + mPeers.size(), this);
+
+        for( WifiDirectPeer peer : mPeers){
+            if(peer.getName().equals(newPeer.getName())){
                 mPeers.remove(peer);
-                mPeers.add(newPeer);
             }
-        } else {
-            mPeers.add(newPeer);
         }
+
+        mPeers.add(newPeer);
     }
 
     @Override
