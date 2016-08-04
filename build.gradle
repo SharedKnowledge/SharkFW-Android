@@ -1,36 +1,24 @@
-apply plugin: 'com.android.library'
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
 
-
-android {
-    compileSdkVersion 23
-    buildToolsVersion "23.0.2"
-
-    defaultConfig {
-        minSdkVersion 16
-        targetSdkVersion 23
-        versionCode 1
-        versionName "1.0"
+buildscript {
+    repositories {
+        jcenter()
     }
-    buildTypes {
-        release {
-            minifyEnabled false
-        }
-        debug {
-            debuggable true
-            minifyEnabled false
-        }
-    }
-    lintOptions {
-        abortOnError false
+    dependencies {
+        classpath 'com.android.tools.build:gradle:2.1.2'
+
+        // NOTE: Do not place your application dependencies here; they belong
+        // in the individual module build.gradle files
     }
 }
 
+allprojects {
+    repositories {
+        jcenter()
+        maven { url "https://jitpack.io" }
+    }
+}
 
-dependencies {
-    compile fileTree(include: ['*.jar'], dir: 'libs')
-    testCompile 'junit:junit:4.12'
-    compile 'com.github.SharedKnowledge:SharkFW:master-SNAPSHOT'
-    compile 'com.android.support:support-v4:23.3.0'
-    compile 'commons-io:commons-io:2.4'
-    compile 'com.vividsolutions:jts:1.13'
+task clean(type: Delete) {
+    delete rootProject.buildDir
 }
