@@ -13,6 +13,7 @@ import net.sharkfw.asip.ASIPInterest;
 import net.sharkfw.asip.ASIPKnowledge;
 import net.sharkfw.asip.engine.ASIPConnection;
 import net.sharkfw.kep.SharkProtocolNotSupportedException;
+import net.sharkfw.knowledgeBase.STSet;
 import net.sharkfw.knowledgeBase.inmemory.InMemoSharkKB;
 import net.sharkfw.kp.KPNotifier;
 import net.sharkfw.peer.KnowledgePort;
@@ -195,6 +196,10 @@ public class SharkService extends Service implements KPNotifier {
 
     public void setInterestToOffer(String mInterestToOffer) {
         this.mInterestToOffer = mInterestToOffer;
+    }
+
+    public void setTopicsToRoute(STSet topics) {
+        mRouterKP.setTopicsToRoute(topics);
     }
 
     public void testing() {

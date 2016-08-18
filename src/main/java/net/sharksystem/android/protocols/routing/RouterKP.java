@@ -20,10 +20,13 @@ import com.vividsolutions.jts.io.WKTReader;
 import net.sharkfw.asip.engine.ASIPConnection;
 import net.sharkfw.asip.engine.ASIPInMessage;
 import net.sharkfw.knowledgeBase.PeerSemanticTag;
+import net.sharkfw.knowledgeBase.STSet;
+import net.sharkfw.knowledgeBase.SharkCSAlgebra;
 import net.sharkfw.knowledgeBase.SharkKBException;
 import net.sharkfw.knowledgeBase.SpatialSemanticTag;
 import net.sharkfw.knowledgeBase.TimeSemanticTag;
 import net.sharkfw.knowledgeBase.geom.SpatialAlgebra;
+import net.sharkfw.knowledgeBase.inmemory.InMemoSharkKB;
 import net.sharkfw.peer.ASIPPort;
 import net.sharksystem.android.peer.AndroidSharkEngine;
 import net.sharksystem.android.protocols.routing.db.CoordinateContentProvider;
@@ -40,7 +43,9 @@ public class RouterKP extends ASIPPort{
     public static final String TAG_COORDINATE_TTL = "coordinateTTL";
 
     public static final long DEFAULT_COORDINATE_TTL = 24 * 60 * 60 * 1000; //days in milliseconds
-    public static final long DEFAULT_LOCATION_CHECK_INTERVAL = 2 * 60 * 1000;
+    public static final int DEFAULT_MIN_DISTANCE = 1000;
+    public static final int DEFAULT_MAX_COPIES = 10;
+    public static final int DEFAULT_LOCATION_CHECK_INTERVAL = 2 * 60 * 1000;
     public static final int MESSAGE_CHECK_INTERVAL = 10000;
 
     private AndroidSharkEngine mEngine;
@@ -50,6 +55,7 @@ public class RouterKP extends ASIPPort{
     private MessageContentProvider mMessageContentProvider;
 
     private long mCoordinateTTL;
+    private STSet mTopics;
 
     private AlarmManager mAlarmManager;
     private PendingIntent mLocationIntent;
@@ -60,10 +66,10 @@ public class RouterKP extends ASIPPort{
     private boolean mIsRouting;
 
     public RouterKP(AndroidSharkEngine engine, Context context) {
-        this(engine, context, DEFAULT_COORDINATE_TTL);
+        this(engine, context, null, DEFAULT_COORDINATE_TTL);
     }
 
-    public RouterKP(AndroidSharkEngine engine, Context context, long coordinateTTL) {
+    public RouterKP(AndroidSharkEngine engine, Context context, STSet topics, long coordinateTTL) {
 //        super(engine);
 
         mIsRouting = false;
@@ -71,6 +77,7 @@ public class RouterKP extends ASIPPort{
         mEngine = engine;
         mContext = context;
         mCoordinateTTL = coordinateTTL;
+        mTopics = (topics != null) ? topics : InMemoSharkKB.createInMemoSTSet();
 
         mCoordinateContentProvider = new CoordinateContentProvider(context);
         mMessageContentProvider = new MessageContentProvider(context);
@@ -99,24 +106,21 @@ public class RouterKP extends ASIPPort{
             persist = false;
 
             try {
-                if (msg.getReceiverPeer() != null) {
-                    persist = true;
-                } else if (msg.getReceiverSpatial() != null && this.isMovementProfileCloser(msg.getReceiverSpatial())) {
-                    persist = true;
-                }
-                else if (msg.getReceiverTime() != null && !this.isTimeSpanInPast(msg.getReceiverTime())) {
-                    persist = true;
-                }
+                if (mTopics.isEmpty() || msg.getTopic().isAny() || SharkCSAlgebra.isIn(mTopics, msg.getTopic())) {
+                    if (msg.getReceiverPeer() != null) {
+                        persist = true;
+                    } else if (msg.getReceiverSpatial() != null && this.isMovementProfileCloser(msg.getReceiverSpatial())) {
+                        persist = true;
+                    }
+                    else if (msg.getReceiverTime() != null && !this.isTimeSpanInPast(msg.getReceiverTime())) {
+                        persist = true;
+                    }
 
-                if (persist) {
-                    try {
+                    if (persist) {
                         mMessageContentProvider.persist(msg);
-                    } catch (JSONException | SharkKBException | IOException e) {
-                        e.printStackTrace();
                     }
                 }
-
-            } catch (SharkKBException | ParseException e) {
+            } catch (SharkKBException | ParseException | IOException | JSONException e) {
                 e.printStackTrace();
             }
         }
@@ -141,7 +145,6 @@ public class RouterKP extends ASIPPort{
             List<MessageDTO> messages = mMessageContentProvider.getAllMessages();
             for (int i = messages.size() - 1; i >=0; i--) {
                 MessageDTO message = messages.get(i);
-
                 if (message.getReceiverPeer() != null) {
                     this.checkReceiverPeer(message);
                 } else if (message.getReceiverSpatial() != null) {
@@ -239,5 +242,9 @@ public class RouterKP extends ASIPPort{
 
     private boolean isTimeSpanInPast(TimeSemanticTag time) {
         return (time.getFrom() + time.getDuration()) < System.currentTimeMillis();
+    }
+
+    public void setTopicsToRoute(STSet topics) {
+
     }
 }

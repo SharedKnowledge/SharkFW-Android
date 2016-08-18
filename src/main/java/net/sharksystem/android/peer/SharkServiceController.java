@@ -10,6 +10,7 @@ import android.util.Log;
 
 import net.sharkfw.asip.ASIPInterest;
 import net.sharkfw.asip.ASIPKnowledge;
+import net.sharkfw.knowledgeBase.STSet;
 import net.sharksystem.android.protocols.wifidirect.WifiDirectPeer;
 
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -80,6 +81,12 @@ public class SharkServiceController implements ServiceConnection, KPListener {
         }
     }
 
+    public void setTopicsToRoute(STSet topics) {
+        if (mSharkService != null) {
+            mSharkService.setTopicsToRoute(topics);
+        }
+    }
+
     public void setOffer(String name, String interest){
         mName = name;
         mInterest = interest;
@@ -138,7 +145,9 @@ public class SharkServiceController implements ServiceConnection, KPListener {
     }
 
     public void sendBroadcast(String text){
-        mSharkService.sendBroadcast(text);
+        if (mSharkService != null) {
+            mSharkService.sendBroadcast(text);
+        }
     }
 
     private boolean isSharkRunning() {
