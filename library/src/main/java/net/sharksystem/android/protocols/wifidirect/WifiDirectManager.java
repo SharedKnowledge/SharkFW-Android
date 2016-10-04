@@ -17,10 +17,8 @@ import android.os.Handler;
 
 import net.sharkfw.asip.ASIPInterest;
 import net.sharkfw.asip.ASIPSpace;
-import net.sharkfw.asip.engine.ASIPSerializer;
 import net.sharkfw.knowledgeBase.PeerSemanticTag;
 import net.sharkfw.knowledgeBase.SharkKBException;
-import net.sharkfw.knowledgeBase.inmemory.InMemoSharkKB;
 import net.sharksystem.android.Application;
 
 import java.util.ArrayList;
@@ -36,11 +34,7 @@ public class WifiDirectManager
         implements WifiP2pManager.DnsSdTxtRecordListener,
         WifiP2pManager.ConnectionInfoListener, Runnable {
 
-    private boolean mIsReceiverRegistered;
-    private boolean mIsDiscovering;
-    private WifiP2pDnsSdServiceInfo mServiceInfo;
-
-    private enum WIFI_STATE {
+    public enum WIFI_STATE {
         INIT,
         DISCOVERING,
         CONNECTING,
@@ -50,6 +44,11 @@ public class WifiDirectManager
         NONE
     }
 
+    private boolean mIsReceiverRegistered;
+    private boolean mIsDiscovering;
+
+    private WifiP2pDnsSdServiceInfo mServiceInfo;
+
     private WIFI_STATE mState = WIFI_STATE.NONE;
 
     private final WifiP2pManager mManager;
@@ -57,7 +56,7 @@ public class WifiDirectManager
 
     private Context mContext = null;
 
-    private final int DISCOVERY_INTERVALL = 10000;
+    private int mDiscoveryInterval = 10000;
 
     // Interfaces
     //
@@ -111,6 +110,10 @@ public class WifiDirectManager
         if(!mNetworkListeners.contains(listener)){
             mNetworkListeners.add(listener);
         }
+    }
+
+    public void setDiscoveryInterval(int interval){
+        this.mDiscoveryInterval = interval;
     }
 
     // Getter
@@ -197,19 +200,28 @@ public class WifiDirectManager
 
     }
 
-    public void connect(List<PeerSemanticTag> peers){
-
-    }
-
-    public void connect(PeerSemanticTag peer){
+    public void connect(PeerSemanticTag peer) throws IllegalArgumentException{
         final WifiP2pConfig config = new WifiP2pConfig();
         for(String addr : peer.getAddresses()){
             if(addr.startsWith("WIFI://")){
                 config.deviceAddress = addr;
             }
         }
+        if(config.deviceAddress == null || config.deviceAddress.isEmpty()){
+            throw new IllegalArgumentException("Peer does not have a WIFI address");
+        }
+
         config.wps.setup = WpsInfo.PBC;
-        mManager.connect(mChannel, config, new WifiActionListener("Init Connection"));
+        mManager.connect(mChannel, config, new WifiP2pManager.ActionListener() {
+            @Override
+            public void onSuccess() {
+
+            }
+
+            @Override
+            public void onFailure(int reason) {
+            }
+        });
         mState = WIFI_STATE.CONNECTING;
     }
 
@@ -217,6 +229,15 @@ public class WifiDirectManager
     // Implemented methods
     //
     //
+
+    private Handler mHandler = new Handler();
+
+    // called to trigger the discovery on a certain basis
+    @Override
+    public void run() {
+        mManager.discoverServices(mChannel, new WifiActionListener("Discover Services"));
+        mHandler.postDelayed(this, mDiscoveryInterval);
+    }
 
     @Override
     public void onDnsSdTxtRecordAvailable(String fullDomainName,
@@ -238,12 +259,13 @@ public class WifiDirectManager
             e.printStackTrace();
         }
 
-        interest.getSender().addAddress(addr);
-
-        PeerSemanticTag sender = interest.getSender();
+        PeerSemanticTag sender = null;
+        if (interest != null) {
+            sender = interest.getSender();
+            sender.addAddress(addr);
+        }
 
         // Inform Listener
-
         for(WifiDirectPeerListener listener : mPeerListeners){
             listener.onNewPeer(sender);
             listener.onNewInterest(interest);
@@ -287,13 +309,4 @@ public class WifiDirectManager
             }
         }
     }
-
-    private Handler mHandler = new Handler();
-
-    @Override
-    public void run() {
-        mManager.discoverServices(mChannel, new WifiActionListener("Discover Services"));
-        mHandler.postDelayed(this, DISCOVERY_INTERVALL);
-    }
-
 }
