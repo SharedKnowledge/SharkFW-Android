@@ -1,12 +1,12 @@
 apply plugin: 'com.android.library'
 
 android {
-    compileSdkVersion 23
-    buildToolsVersion "23.0.2"
+    compileSdkVersion 24
+    buildToolsVersion "23.0.3"
 
     defaultConfig {
         minSdkVersion 19
-        targetSdkVersion 23
+        targetSdkVersion 24
         versionCode 1
         versionName "1.0"
     }
@@ -17,24 +17,27 @@ android {
         }
     }
 
-
-    configurations.all {
-        resolutionStrategy {
-            // cache dynamic versions for 10 minutes
-            cacheDynamicVersionsFor 60, 'seconds'
-            // don't cache changing modules at all
-            cacheChangingModulesFor 0, 'seconds'
-        }
-    }
+//    configurations.all {
+//        resolutionStrategy {
+//            // cache dynamic versions for 10 minutes
+//            cacheDynamicVersionsFor 60, 'seconds'
+//            // don't cache changing modules at all
+//            cacheChangingModulesFor 0, 'seconds'
+//        }
+//    }
 }
 
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
     testCompile 'junit:junit:4.12'
-    compile 'com.android.support:appcompat-v7:23.4.0'
-    compile ('com.github.SharedKnowledge:SharkFW:-SNAPSHOT'){
+    compile ('net.sharksystem:sharkfw-core:1.0-SNAPSHOT'){
         exclude group: 'org.json', module: 'json'
+//        exclude group: 'commons-logging'
     }
-    compile 'com.android.support:support-v4:23.3.0'
+//    compile ('com.github.SharedKnowledge:SharkFW:-SNAPSHOT'){
+//        exclude group: 'org.json', module: 'json'
+//        exclude group: 'commons-logging'
+//    }
+    compile 'com.android.support:appcompat-v7:24.2.1'
+    compile 'com.android.support:support-v4:24.2.1'
     compile 'com.vividsolutions:jts:1.13'
 }
