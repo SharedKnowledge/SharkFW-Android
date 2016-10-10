@@ -19,26 +19,26 @@ android {
         }
     }
 
-//    configurations.all {
-//        resolutionStrategy {
-//            // cache dynamic versions for 10 minutes
-//            cacheDynamicVersionsFor 60, 'seconds'
-//            // don't cache changing modules at all
-//            cacheChangingModulesFor 0, 'seconds'
-//        }
-//    }
+    configurations.all {
+        resolutionStrategy {
+            // cache dynamic versions for 10 minutes
+            cacheDynamicVersionsFor 60, 'seconds'
+            // don't cache changing modules at all
+            cacheChangingModulesFor 0, 'seconds'
+        }
+    }
 }
 
 dependencies {
     testCompile 'junit:junit:4.12'
-    compile ('net.sharksystem:sharkfw-core:1.0-SNAPSHOT'){
-        exclude group: 'org.json', module: 'json'
-//        exclude group: 'commons-logging'
-    }
-//    compile ('com.github.SharedKnowledge:SharkFW:-SNAPSHOT'){
+//    compile ('net.sharksystem:sharkfw-core:1.0-SNAPSHOT'){
 //        exclude group: 'org.json', module: 'json'
-//        exclude group: 'commons-logging'
+////        exclude group: 'commons-logging'
 //    }
+    compile ('com.github.SharedKnowledge:SharkFW:-SNAPSHOT'){
+        exclude group: 'org.json', module: 'json'
+        exclude group: 'commons-logging'
+    }
     compile 'com.android.support:appcompat-v7:24.2.1'
     compile 'com.android.support:support-v4:24.2.1'
     compile 'com.vividsolutions:jts:1.13'
