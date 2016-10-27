@@ -8,12 +8,8 @@ import android.location.Location;
 import android.os.Handler;
 import android.text.TextUtils;
 
-import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
-import com.vividsolutions.jts.geom.GeometryFactory;
-import com.vividsolutions.jts.geom.LineString;
 import com.vividsolutions.jts.geom.Point;
-import com.vividsolutions.jts.geom.Polygon;
 import com.vividsolutions.jts.io.ParseException;
 import com.vividsolutions.jts.io.WKTReader;
 
@@ -28,6 +24,7 @@ import net.sharkfw.knowledgeBase.TimeSemanticTag;
 import net.sharkfw.knowledgeBase.geom.SpatialAlgebra;
 import net.sharkfw.knowledgeBase.inmemory.InMemoSharkKB;
 import net.sharkfw.peer.ASIPPort;
+import net.sharkfw.peer.SharkEngine;
 import net.sharksystem.android.peer.AndroidSharkEngine;
 import net.sharksystem.android.protocols.routing.db.CoordinateContentProvider;
 import net.sharksystem.android.protocols.routing.db.MessageContentProvider;
@@ -69,7 +66,7 @@ public class RouterKP extends ASIPPort{
         this(engine, context, null, DEFAULT_COORDINATE_TTL);
     }
 
-    public RouterKP(SharkEngine engine, Context context, long coordinateTTL) {
+    public RouterKP(AndroidSharkEngine engine, Context context, STSet topics, long coordinateTTL) {
         super(engine);
 
         mIsRouting = false;

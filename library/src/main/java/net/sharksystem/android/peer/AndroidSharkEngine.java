@@ -14,8 +14,6 @@ import net.sharkfw.asip.engine.ASIPMessage;
 import net.sharkfw.asip.engine.ASIPOutMessage;
 import net.sharkfw.asip.engine.ASIPSerializer;
 import net.sharkfw.kep.SharkProtocolNotSupportedException;
-import net.sharkfw.knowledgeBase.Interest;
-import net.sharkfw.knowledgeBase.Knowledge;
 import net.sharkfw.knowledgeBase.PeerSemanticTag;
 import net.sharkfw.knowledgeBase.STSet;
 import net.sharkfw.knowledgeBase.SemanticTag;
@@ -29,13 +27,10 @@ import net.sharkfw.protocols.RequestHandler;
 import net.sharkfw.protocols.Stub;
 import net.sharkfw.system.L;
 import net.sharksystem.android.protocols.nfc.NfcMessageStub;
-import net.sharksystem.android.protocols.wifidirect_obsolete.WifiDirectStreamStub;
 import net.sharksystem.android.protocols.routing.db.MessageDTO;
-import net.sharksystem.android.protocols.wifidirect.WifiDirectStreamStub;
+import net.sharksystem.android.protocols.wifidirect_obsolete.WifiDirectStreamStub;
 
 import java.io.ByteArrayInputStream;
-import org.apache.commons.io.IOUtils;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.ref.WeakReference;
