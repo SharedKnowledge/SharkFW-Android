@@ -10,13 +10,13 @@ import net.sharkfw.asip.engine.ASIPMessage;
 import net.sharkfw.asip.engine.ASIPSerializer;
 import net.sharkfw.knowledgeBase.SharkKBException;
 
-import org.apache.commons.io.IOUtils;
 import org.json.JSONException;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Scanner;
 
 public class MessageContentProvider {
 
@@ -59,7 +59,8 @@ public class MessageContentProvider {
             content = ASIPSerializer.serializeInterest(msg.getInterest()).toString();
         } else {
             InputStream is = msg.getInputStream();
-            content = IOUtils.toString(is);
+            Scanner s = new Scanner(is).useDelimiter("\\A");
+            content = s.hasNext() ? s.next() : "";
             is.close();
         }
 

@@ -17,7 +17,6 @@ public class WifiDirectUtil {
 
     public final static String NAME_RECORD = "NAME";
     public final static String TOPIC_RECORD = "TO";
-
     public final static String TYPE_RECORD = "TY";
     public final static String SENDER_RECORD = "SE";
     public final static String APPROVERS_RECORD = "AP";

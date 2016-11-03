@@ -56,7 +56,6 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine implements KPNoti
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     public AndroidSharkEngine(Context context) {
         super();
-        this.activateASIP();
         this.mContext = context;
 
 //        final ConnectivityManager connectivityManager = (ConnectivityManager) this.mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -137,7 +136,6 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine implements KPNoti
 
     public AndroidSharkEngine(Activity activity) {
         super();
-        this.activateASIP();
         this.mContext = activity.getApplicationContext();
         this.activityRef = new WeakReference<>(activity);
     }
@@ -261,11 +259,11 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine implements KPNoti
      * @param time
      * @param knowledge
      */
-    public void sendBroadcast(final SemanticTag topic, final PeerSemanticTag receiver, final SpatialSemanticTag location, final TimeSemanticTag time, final ASIPKnowledge knowledge){
+    public void sendBroadcast(final SemanticTag topic, final SemanticTag type, final PeerSemanticTag receiver, final SpatialSemanticTag location, final TimeSemanticTag time, final ASIPKnowledge knowledge){
         new Thread(new Runnable() {
             @Override
             public void run() {
-                ASIPOutMessage message = createASIPOutMessage(topic, receiver, location, time);
+                ASIPOutMessage message = createASIPOutMessage(topic, type, receiver, location, time);
                 message.insert(knowledge);
             }
         }).start();
@@ -278,22 +276,22 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine implements KPNoti
      * @param time
      * @param interest
      */
-    public void sendBroadcast(final SemanticTag topic, final PeerSemanticTag receiver, final SpatialSemanticTag location, final TimeSemanticTag time, final ASIPInterest interest){
+    public void sendBroadcast(final SemanticTag topic, final SemanticTag type, final PeerSemanticTag receiver, final SpatialSemanticTag location, final TimeSemanticTag time, final ASIPInterest interest){
         new Thread(new Runnable() {
             @Override
             public void run() {
-                ASIPOutMessage message = createASIPOutMessage(topic, receiver, location, time);
+                ASIPOutMessage message = createASIPOutMessage(topic, type, receiver, location, time);
                 message.expose(interest);
             }
         }).start();
     }
 
-    public ASIPOutMessage createASIPOutMessage(SemanticTag topic, PeerSemanticTag receiver, SpatialSemanticTag location, TimeSemanticTag time){
+    public ASIPOutMessage createASIPOutMessage(SemanticTag topic, SemanticTag type, PeerSemanticTag receiver, SpatialSemanticTag location, TimeSemanticTag time){
         String[] addresses = this.getNearbyPeerTCPAddresses();
 
         if (addresses.length <= 0) return null;
 
-        return createASIPOutMessage(addresses, this.getOwner(), receiver, location, time, topic, 10);
+        return createASIPOutMessage(addresses, this.getOwner(), receiver, location, time, topic, type, 10);
     }
 
 
@@ -301,7 +299,7 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine implements KPNoti
         new Thread(new Runnable() {
             @Override
             public void run() {
-                ASIPOutMessage message = createASIPOutMessage(null, null, null, null);
+                ASIPOutMessage message = createASIPOutMessage(null, null, null, null, null);
                 if(message==null) return;
                 ByteArrayInputStream stream = null;
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT) {
