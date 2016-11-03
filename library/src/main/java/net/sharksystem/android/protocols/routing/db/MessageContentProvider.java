@@ -32,6 +32,8 @@ public class MessageContentProvider {
             //MySQLiteHelper.COLUMN_SIGNATURE,
             MySQLiteHelper.COLUMN_TTL,
             MySQLiteHelper.COLUMN_COMMAND,
+            MySQLiteHelper.COLUMN_TOPIC,
+            MySQLiteHelper.COLUMN_TYPE,
             MySQLiteHelper.COLUMN_SENDER,
             MySQLiteHelper.COLUMN_RECEIVERS,
             MySQLiteHelper.COLUMN_RECEIVERPEER,
@@ -74,6 +76,7 @@ public class MessageContentProvider {
         values.put(MySQLiteHelper.COLUMN_TTL, msg.getTtl());
         values.put(MySQLiteHelper.COLUMN_COMMAND, msg.getCommand());
         values.put(MySQLiteHelper.COLUMN_TOPIC, msg.getTopic() != null ? ASIPSerializer.serializeTag(msg.getTopic()).toString() : "");
+        values.put(MySQLiteHelper.COLUMN_TYPE, msg.getType() != null ? ASIPSerializer.serializeTag(msg.getType()).toString() : "");
         values.put(MySQLiteHelper.COLUMN_SENDER, msg.getSender() != null ? ASIPSerializer.serializeTag(msg.getSender()).toString() : "");
         values.put(MySQLiteHelper.COLUMN_RECEIVERS, msg.getReceivers() != null ? ASIPSerializer.serializeSTSet(msg.getReceivers()).toString() : "");
         values.put(MySQLiteHelper.COLUMN_RECEIVERPEER, msg.getReceiverPeer() != null ? ASIPSerializer.serializeTag(msg.getReceiverPeer()).toString() : "");
@@ -101,6 +104,7 @@ public class MessageContentProvider {
         values.put(MySQLiteHelper.COLUMN_TTL, msg.getTtl());
         values.put(MySQLiteHelper.COLUMN_COMMAND, msg.getCommand());
         values.put(MySQLiteHelper.COLUMN_TOPIC, msg.getTopic() != null ? ASIPSerializer.serializeTag(msg.getTopic()).toString() : "");
+        values.put(MySQLiteHelper.COLUMN_TYPE, msg.getType() != null ? ASIPSerializer.serializeTag(msg.getType()).toString() : "");
         values.put(MySQLiteHelper.COLUMN_SENDER, msg.getSender() != null ? ASIPSerializer.serializeTag(msg.getSender()).toString() : "");
         values.put(MySQLiteHelper.COLUMN_RECEIVERS, msg.getReceivers() != null ? ASIPSerializer.serializeSTSet(msg.getReceivers()).toString() : "");
         values.put(MySQLiteHelper.COLUMN_RECEIVERPEER, msg.getReceiverPeer() != null ? ASIPSerializer.serializeTag(msg.getReceiverPeer()).toString() : "");
@@ -153,11 +157,12 @@ public class MessageContentProvider {
         messageDTO.setCommand(cursor.getInt(7));
         messageDTO.setSender(ASIPSerializer.deserializePeerTag(cursor.getString(8)));
         messageDTO.setTopic(ASIPSerializer.deserializeTag(cursor.getString(9)));
-        //messageDTO.setReceivers(ASIPSerializer.deserializeSTSet(cursor.getString(10)));
-        messageDTO.setReceiverPeer(ASIPSerializer.deserializePeerTag(cursor.getString(11)));
-        messageDTO.setReceiverSpatial(ASIPSerializer.deserializeSpatialTag(cursor.getString(12)));
-        messageDTO.setReceiverTime(ASIPSerializer.deserializeTimeTag(cursor.getString(13)));
-        messageDTO.setContent(cursor.getString(14));
+        messageDTO.setType(ASIPSerializer.deserializeTag(cursor.getString(10)));
+        //messageDTO.setReceivers(ASIPSerializer.deserializeSTSet(cursor.getString(11)));
+        messageDTO.setReceiverPeer(ASIPSerializer.deserializePeerTag(cursor.getString(12)));
+        messageDTO.setReceiverSpatial(ASIPSerializer.deserializeSpatialTag(cursor.getString(13)));
+        messageDTO.setReceiverTime(ASIPSerializer.deserializeTimeTag(cursor.getString(14)));
+        messageDTO.setContent(cursor.getString(15));
 
         //TODO content is just a string right now..can be interest or knowledge or raw though
         return messageDTO;

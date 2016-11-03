@@ -19,6 +19,7 @@ public class MessageDTO {
 
     private int command;
     private SemanticTag topic;
+    private SemanticTag type;
     private PeerSemanticTag sender;
     private STSet receivers;
     private PeerSemanticTag receiverPeer;
@@ -104,6 +105,14 @@ public class MessageDTO {
 
     public void setTopic(SemanticTag topic) {
         this.topic = topic;
+    }
+
+    public SemanticTag getType() {
+        return this.type;
+    }
+
+    public void setType(SemanticTag type) {
+        this.type = type;
     }
 
     public PeerSemanticTag getSender() {

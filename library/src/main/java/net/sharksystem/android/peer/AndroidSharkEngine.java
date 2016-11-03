@@ -319,7 +319,7 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine implements KPNoti
         new Thread(new Runnable() {
             @Override
             public void run() {
-                ASIPOutMessage asipMessage = createASIPOutMessage(addresses, getOwner(), message.getReceiverPeer(), message.getReceiverSpatial(), message.getReceiverTime(), message.getTopic(), message.getTtl());
+                ASIPOutMessage asipMessage = createASIPOutMessage(addresses, getOwner(), message.getReceiverPeer(), message.getReceiverSpatial(), message.getReceiverTime(), message.getTopic(), message.getType(), message.getTtl());
                 try {
                     if (message.getCommand() == ASIPMessage.ASIP_INSERT) {
                         ASIPKnowledge knowledge = ASIPSerializer.deserializeASIPKnowledge(message.getContent());

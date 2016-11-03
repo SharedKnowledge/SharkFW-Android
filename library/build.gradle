@@ -1,12 +1,12 @@
 apply plugin: 'com.android.library'
 
 android {
-    compileSdkVersion 24
+    compileSdkVersion 25
     buildToolsVersion "23.0.3"
 
     defaultConfig {
         minSdkVersion 19
-        targetSdkVersion 24
+        targetSdkVersion 25
         versionCode 1
         versionName "1.0"
     }
@@ -20,12 +20,8 @@ android {
 
 dependencies {
     testCompile 'junit:junit:4.12'
-    compile ('net.sharksystem:sharkfw-core:1.0-SNAPSHOT'){
-        exclude group: 'org.json', module: 'json'
-        exclude group: 'commons-logging'
-        exclude group: 'javax.activation'
-    }
-    compile 'com.android.support:appcompat-v7:24.2.1'
-    compile 'com.android.support:support-v4:24.2.1'
+    compile files('libs/sharkfw-core-1.0-SNAPSHOT.jar')
+    compile 'com.android.support:appcompat-v7:25.0.0'
+    compile 'com.android.support:support-v4:25.0.0'
     compile 'com.vividsolutions:jts:1.13'
 }
