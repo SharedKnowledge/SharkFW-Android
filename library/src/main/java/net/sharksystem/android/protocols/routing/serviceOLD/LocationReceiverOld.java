@@ -14,8 +14,8 @@ import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.GeometryFactory;
 
-import net.sharksystem.android.protocols.routing.communication.Utils;
-import de.htw.f4.movingrouter.db.CoordinateContentProvider;
+import net.sharksystem.android.protocols.routing.Utils;
+import net.sharksystem.android.protocols.routing.db.CoordinateContentProvider;
 
 public class LocationReceiverOld extends BroadcastReceiver {
 

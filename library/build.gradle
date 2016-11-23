@@ -2,7 +2,7 @@ apply plugin: 'com.android.library'
 
 android {
     compileSdkVersion 25
-    buildToolsVersion "23.0.3"
+    buildToolsVersion "25.0.0"
 
     defaultConfig {
         minSdkVersion 19
@@ -12,7 +12,7 @@ android {
     }
     buildTypes {
         release {
-            minifyEnabled true
+            minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
@@ -26,8 +26,8 @@ dependencies {
             exclude group: 'commons-logging'
             exclude group: 'javax.activation'
         }
-        compile 'com.android.support:appcompat-v7:24.2.1'
-        compile 'com.android.support:support-v4:24.2.1'
+        compile 'com.android.support:appcompat-v7:25.0.1'
+        compile 'com.android.support:support-v4:25.0.1'
         compile 'com.vividsolutions:jts:1.13'
     }
 }

@@ -23,6 +23,7 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
     public static final String COLUMN_ENCRYPTED_SESSION_KEY = "encrypted_session_key";
     public static final String COLUMN_SIGNED = "signed";
     public static final String COLUMN_TTL = "ttl";
+    public static final String COLUMN_CHECKS = "checks";
     public static final String COLUMN_COMMAND = "command";
     public static final String COLUMN_TOPIC = "topic";
     public static final String COLUMN_TYPE = "type";
@@ -60,6 +61,7 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
             + COLUMN_ENCRYPTED_SESSION_KEY + " text, "
             + COLUMN_SIGNED + " bool, "
             + COLUMN_TTL + " signed bigint, "
+            + COLUMN_CHECKS + " signed bigint, "
             + COLUMN_COMMAND + " integer, "
             + COLUMN_TOPIC + " text, "
             + COLUMN_TYPE + " text, "

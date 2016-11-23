@@ -16,15 +16,14 @@ import com.vividsolutions.jts.io.ParseException;
 import com.vividsolutions.jts.io.WKTReader;
 
 import net.sharkfw.knowledgeBase.SharkKBException;
+import net.sharksystem.android.protocols.routing.Utils;
+import net.sharksystem.android.protocols.routing.db.CoordinateContentProvider;
+import net.sharksystem.android.protocols.routing.db.MessageContentProvider;
+import net.sharksystem.android.protocols.routing.db.MessageDTO;
 
 import org.json.JSONException;
 
 import java.util.List;
-
-import net.sharksystem.android.protocols.routing.communication.Utils;
-import de.htw.f4.movingrouter.db.CoordinateContentProvider;
-import de.htw.f4.movingrouter.db.MessageContentProvider;
-import de.htw.f4.movingrouter.db.MessageDTO;
 
 public class MovingRouterLocationListener implements LocationListener {
 
