@@ -10,6 +10,27 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
+
+        <service
+            android:name="net.sharksystem.android.protocols.routing.serviceOLD.LocationServiceOld"
+            android:enabled="true" />
+
+        <service
+            android:name="net.sharksystem.android.protocols.routing.service.LocationService"
+            android:enabled="true" />
+
+        <service android:name="net.sharksystem.android.peer.SharkService" android:enabled="true" />
+
+        <receiver android:name="net.sharksystem.android.protocols.routing.serviceOLD.LocationReceiverOld" android:process=":remote" >
+
+            <!-- this Broadcast Receiver only listens to the following intent -->
+            <intent-filter>
+                <action android:name="org.mabna.order.ACTION_REFRESH_SCHEDULE_ALARM" />
+            </intent-filter>
+        </receiver>
+
+
+
     </application>
 
 </manifest>

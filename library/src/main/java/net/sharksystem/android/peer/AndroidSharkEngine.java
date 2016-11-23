@@ -207,11 +207,11 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine implements KPNoti
 
     public void offerInterest(String topic, String name){
 
-        if(name.isEmpty())
+        if(name == null || name.isEmpty())
             name = "A";
         mName = name;
 
-        if(topic.isEmpty())
+        if(topic == null || topic.isEmpty())
            topic = "I";
 
         String[] addresses = getDeviceIPAddresses();

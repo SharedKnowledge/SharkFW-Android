@@ -122,7 +122,7 @@ public class SharkService extends Service implements KPNotifier {
             try {
                 mEngine.offerInterest(mInterestToOffer, mNameToOffer);
                 mEngine.startWifiDirect();
-                mEngine.startTCP(7071);
+                mEngine.startTCP(7072);
             } catch (IOException | SharkProtocolNotSupportedException e) {
                 e.printStackTrace();
             }
@@ -137,13 +137,13 @@ public class SharkService extends Service implements KPNotifier {
             try {
                 L.d("Stop Wifi", this);
                 mEngine.stopWifiDirect();
+                mEngine.stopTCP();
             } catch (SharkProtocolNotSupportedException e) {
                 e.printStackTrace();
             }
             mIsEngingeStarted = false;
 
             mPrefs.edit().putBoolean(IS_ENGINE_RUNNING_KEY, false).apply();
-
         }
     }
 
