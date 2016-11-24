@@ -81,10 +81,12 @@ public class RoutingService extends Service {
         mPrefs.edit().putBoolean(IS_ROUTING_ENABLED_KEY, false).apply();
     }
 
+    // TODO offerInterest really necessary? Exception otherwise
     public void startEngine() {
         L.d("Starting", this);
         if (!mIsEngingeStarted) {
             try {
+                mEngine.offerInterest("Interest", "Name");
                 mEngine.startWifiDirect();
                 mEngine.startTCP(7072);
             } catch (IOException | SharkProtocolNotSupportedException e) {
