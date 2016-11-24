@@ -9,18 +9,20 @@ import net.sharkfw.asip.engine.ASIPInMessage;
 import net.sharkfw.asip.engine.ASIPMessage;
 import net.sharkfw.asip.engine.ASIPSerializer;
 import net.sharkfw.knowledgeBase.SharkKBException;
+import net.sharksystem.android.peer.KPListener;
 
 import org.json.JSONException;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
 public class MessageContentProvider {
-
-    public static final long MAX_CHECKS = 2;
 
     private MySQLiteHelper dbHelper;
     private String[] allMessagesColumns = { MySQLiteHelper.COLUMN_ID,
@@ -31,7 +33,7 @@ public class MessageContentProvider {
             MySQLiteHelper.COLUMN_SIGNED,
             //MySQLiteHelper.COLUMN_SIGNATURE,
             MySQLiteHelper.COLUMN_TTL,
-            MySQLiteHelper.COLUMN_CHECKS,
+            MySQLiteHelper.COLUMN_COPIES,
             MySQLiteHelper.COLUMN_COMMAND,
             MySQLiteHelper.COLUMN_TOPIC,
             MySQLiteHelper.COLUMN_TYPE,
@@ -52,7 +54,7 @@ public class MessageContentProvider {
 
     //TODO Signature
     //TODO is the topic right? as it is derived from ASIPMessage
-    public void persist(ASIPInMessage msg) throws JSONException, SharkKBException, IOException {
+    public void persist(ASIPInMessage msg, int maxCopies) throws JSONException, SharkKBException, IOException {
         SQLiteDatabase database = dbHelper.getWritableDatabase();
 
         String content;
@@ -61,10 +63,7 @@ public class MessageContentProvider {
         } else  if (msg.getCommand() == ASIPMessage.ASIP_EXPOSE) {
             content = ASIPSerializer.serializeInterest(msg.getInterest()).toString();
         } else {
-            InputStream is = msg.getInputStream();
-            Scanner s = new Scanner(is).useDelimiter("\\A");
-            content = s.hasNext() ? s.next() : "";
-            is.close();
+            content = this.getRawContent(msg);
         }
 
         ContentValues values = new ContentValues();
@@ -75,7 +74,7 @@ public class MessageContentProvider {
         values.put(MySQLiteHelper.COLUMN_SIGNED, msg.isSigned());
         //values.put(MySQLiteHelper.SIGNATURE, msg.getSignature());
         values.put(MySQLiteHelper.COLUMN_TTL, msg.getTtl());
-        values.put(MySQLiteHelper.COLUMN_CHECKS, MAX_CHECKS);
+        values.put(MySQLiteHelper.COLUMN_COPIES, maxCopies);
         values.put(MySQLiteHelper.COLUMN_COMMAND, msg.getCommand());
         values.put(MySQLiteHelper.COLUMN_TOPIC, msg.getTopic() != null ? ASIPSerializer.serializeTag(msg.getTopic()).toString() : "");
         values.put(MySQLiteHelper.COLUMN_TYPE, msg.getType() != null ? ASIPSerializer.serializeTag(msg.getType()).toString() : "");
@@ -91,6 +90,28 @@ public class MessageContentProvider {
         dbHelper.close();
     }
 
+    private String getRawContent(ASIPInMessage msg) {
+        String result = "";
+
+        char[] buffer = new char[1024];
+        BufferedReader in = new BufferedReader(new InputStreamReader(msg.getRaw(), StandardCharsets.UTF_8));
+        StringBuilder builder= new StringBuilder();
+        int charsRead;
+
+        try {
+            if(in.ready()){
+                do{
+                    charsRead = in.read(buffer);
+                    builder.append(buffer, 0 ,charsRead);
+                } while(charsRead == buffer.length);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return builder.toString();
+    }
+
     //TODO Signature
     //TODO is the topic right? as it is derived from ASIPMessage
     public void update(MessageDTO msg) throws JSONException, SharkKBException {
@@ -104,7 +125,7 @@ public class MessageContentProvider {
         values.put(MySQLiteHelper.COLUMN_SIGNED, msg.isSigned());
         //values.put(MySQLiteHelper.SIGNATURE, msg.getSignature());
         values.put(MySQLiteHelper.COLUMN_TTL, msg.getTtl());
-        values.put(MySQLiteHelper.COLUMN_CHECKS, msg.getChecks());
+        values.put(MySQLiteHelper.COLUMN_COPIES, msg.getChecks());
         values.put(MySQLiteHelper.COLUMN_COMMAND, msg.getCommand());
         values.put(MySQLiteHelper.COLUMN_SENDER, msg.getSender() != null ? ASIPSerializer.serializeTag(msg.getSender()).toString() : "");
         values.put(MySQLiteHelper.COLUMN_TOPIC, msg.getTopic() != null ? ASIPSerializer.serializeTag(msg.getTopic()).toString() : "");

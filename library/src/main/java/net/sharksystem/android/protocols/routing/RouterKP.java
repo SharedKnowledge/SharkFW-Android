@@ -24,7 +24,6 @@ import net.sharkfw.knowledgeBase.TimeSemanticTag;
 import net.sharkfw.knowledgeBase.geom.SpatialAlgebra;
 import net.sharkfw.knowledgeBase.inmemory.InMemoSharkKB;
 import net.sharkfw.peer.ASIPPort;
-import net.sharkfw.peer.SharkEngine;
 import net.sharksystem.android.peer.AndroidSharkEngine;
 import net.sharksystem.android.protocols.routing.db.CoordinateContentProvider;
 import net.sharksystem.android.protocols.routing.db.MessageContentProvider;
@@ -41,7 +40,7 @@ public class RouterKP extends ASIPPort{
 
     public static final long DEFAULT_COORDINATE_TTL = 24 * 60 * 60 * 1000; //days in milliseconds
     public static final int DEFAULT_MIN_DISTANCE = 1000;
-    public static final int DEFAULT_MAX_COPIES = 10;
+
     public static final int DEFAULT_LOCATION_CHECK_INTERVAL = 2 * 60 * 1000;
     public static final int MESSAGE_CHECK_INTERVAL = 10000;
 
@@ -52,29 +51,42 @@ public class RouterKP extends ASIPPort{
     private MessageContentProvider mMessageContentProvider;
 
     private long mCoordinateTTL;
-    private STSet mTopics;
-
     private AlarmManager mAlarmManager;
+
     private PendingIntent mLocationIntent;
-
     private Runnable mRunnable;
-    private Handler mHandler;
 
+    private Handler mHandler;
     private boolean mIsRouting;
 
+    //-----------------------------------------------------------------------------
+    //------------------------- Configuration Parameters --------------------------
+    //-----------------------------------------------------------------------------
+    private STSet mTopicsToRoute;
+    private boolean mRouteAnyTopics;
+    private int mMaxCopies;
+
+    //-----------------------------------------------------------------------------
+    //------------------------- Configuration Defaults-- --------------------------
+    //-----------------------------------------------------------------------------
+    private static final int DEFAULT_MAX_COPIES = 10;
+
+
     public RouterKP(AndroidSharkEngine engine, Context context) {
-        this(engine, context, null, DEFAULT_COORDINATE_TTL);
+        this(engine, context, null, false, DEFAULT_MAX_COPIES, DEFAULT_COORDINATE_TTL);
     }
 
-    public RouterKP(AndroidSharkEngine engine, Context context, STSet topics, long coordinateTTL) {
+    public RouterKP(AndroidSharkEngine engine, Context context, STSet topics, boolean routeAnyTopics, int maxCopies, long coordinateTTL) {
         super(engine);
 
         mIsRouting = false;
-
         mEngine = engine;
         mContext = context;
         mCoordinateTTL = coordinateTTL;
-        mTopics = (topics != null) ? topics : InMemoSharkKB.createInMemoSTSet();
+
+        mTopicsToRoute = (topics != null) ? topics : InMemoSharkKB.createInMemoSTSet();
+        mRouteAnyTopics = routeAnyTopics;
+        mMaxCopies = mMaxCopies;
 
         mCoordinateContentProvider = new CoordinateContentProvider(context);
         mMessageContentProvider = new MessageContentProvider(context);
@@ -100,10 +112,17 @@ public class RouterKP extends ASIPPort{
 
         boolean persist = false;
         if (mIsRouting) {
+            boolean topicOk = false;
             persist = false;
 
             try {
-                if (mTopics.isEmpty() || msg.getTopic().isAny() || SharkCSAlgebra.isIn(mTopics, msg.getTopic())) {
+                if (msg.getTopic().isAny() && mRouteAnyTopics) {
+                    topicOk = true;
+                } else if (mTopicsToRoute.isEmpty() || SharkCSAlgebra.isIn(mTopicsToRoute, msg.getTopic())) {
+                    topicOk = true;
+                }
+
+                if (topicOk) {
                     if (msg.getReceiverPeer() != null) {
                         persist = true;
                     } else if (msg.getReceiverSpatial() != null && this.isMovementProfileCloser(msg.getReceiverSpatial())) {
@@ -114,7 +133,7 @@ public class RouterKP extends ASIPPort{
                     }
 
                     if (persist) {
-                        mMessageContentProvider.persist(msg);
+                        mMessageContentProvider.persist(msg, mMaxCopies);
                     }
                 }
             } catch (SharkKBException | ParseException | IOException | JSONException e) {
