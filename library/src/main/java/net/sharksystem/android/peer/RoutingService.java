@@ -1,32 +1,20 @@
 package net.sharksystem.android.peer;
 
-import android.annotation.TargetApi;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.wifi.WifiManager;
 import android.os.Binder;
-import android.os.Build;
 import android.os.IBinder;
 import android.util.Log;
 
-import net.sharkfw.asip.ASIPInterest;
-import net.sharkfw.asip.ASIPKnowledge;
-import net.sharkfw.asip.engine.ASIPConnection;
 import net.sharkfw.kep.SharkProtocolNotSupportedException;
 import net.sharkfw.knowledgeBase.STSet;
-import net.sharkfw.kp.KPNotifier;
-import net.sharkfw.peer.ASIPPort;
 import net.sharkfw.system.L;
 import net.sharksystem.android.protocols.routing.RouterKP;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 
 
 public class RoutingService extends Service {
@@ -110,8 +98,8 @@ public class RoutingService extends Service {
 
     public void stopEngine() {
         if (mIsEngingeStarted) {
+            L.d("Stop Wifi", this);
             try {
-                L.d("Stop Wifi", this);
                 mEngine.stopWifiDirect();
                 mEngine.stopTCP();
             } catch (SharkProtocolNotSupportedException e) {

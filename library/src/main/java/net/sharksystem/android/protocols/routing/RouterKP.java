@@ -24,18 +24,17 @@ import net.sharkfw.knowledgeBase.TimeSemanticTag;
 import net.sharkfw.knowledgeBase.geom.SpatialAlgebra;
 import net.sharkfw.knowledgeBase.inmemory.InMemoSharkKB;
 import net.sharkfw.peer.ASIPPort;
+import net.sharkfw.system.L;
+import net.sharkfw.system.SharkException;
 import net.sharksystem.android.peer.AndroidSharkEngine;
 import net.sharksystem.android.protocols.routing.db.CoordinateContentProvider;
 import net.sharksystem.android.protocols.routing.db.MessageContentProvider;
 import net.sharksystem.android.protocols.routing.db.MessageDTO;
 
-import org.json.JSONException;
-
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class RouterKP extends ASIPPort{
+public class RouterKP extends ASIPPort {
     public static final String TAG_COORDINATE_TTL = "coordinateTTL";
 
     public static final long DEFAULT_COORDINATE_TTL = 24 * 60 * 60 * 1000; //days in milliseconds
@@ -107,7 +106,7 @@ public class RouterKP extends ASIPPort{
     }
 
     @Override
-    public boolean handleMessage(ASIPInMessage msg, ASIPConnection con) {
+    public boolean handleMessage(ASIPInMessage message, ASIPConnection connection) {
 //        super.doProcess(msg, con);
 
         boolean persist = false;
@@ -117,28 +116,28 @@ public class RouterKP extends ASIPPort{
             persist = false;
 
             try {
-                if (msg.getTopic().isAny() && mRouteAnyTopics) {
+                if (message.getTopic().isAny() && mRouteAnyTopics) {
                     topicOk = true;
-                } else if (mTopicsToRoute.isEmpty() || SharkCSAlgebra.isIn(mTopicsToRoute, msg.getTopic())) {
+                } else if (mTopicsToRoute.isEmpty() || SharkCSAlgebra.isIn(mTopicsToRoute, message.getTopic())) {
                     topicOk = true;
                 }
 
                 if (topicOk) {
-                    messageAlreadyStored = mMessageContentProvider.doesMessageAlreadyExist(msg);
+                    messageAlreadyStored = mMessageContentProvider.doesMessageAlreadyExist(message);
                 }
 
                 if (topicOk && !messageAlreadyStored) {
-                    if (msg.getReceiverPeer() != null) {
+                    if (message.getReceiverPeer() != null) {
                         persist = true;
-                    } else if (msg.getReceiverSpatial() != null && this.isMovementProfileCloser(msg.getReceiverSpatial())) {
+                    } else if (message.getReceiverSpatial() != null && this.isMovementProfileCloser(message.getReceiverSpatial())) {
                         persist = true;
-                    }
-                    else if (msg.getReceiverTime() != null && !this.isTimeSpanInPast(msg.getReceiverTime())) {
+                    } else if (message.getReceiverTime() != null && !this.isTimeSpanInPast(message.getReceiverTime())) {
                         persist = true;
                     }
 
                     if (persist) {
-                        mMessageContentProvider.persist(msg, mMaxCopies);
+                        this.sendResponse(message, connection);
+                        mMessageContentProvider.persist(message, mMaxCopies);
                     }
                 }
             } catch (SharkKBException | ParseException e) {
@@ -146,6 +145,15 @@ public class RouterKP extends ASIPPort{
             }
         }
         return persist;
+    }
+
+    private void sendResponse(ASIPInMessage message, ASIPConnection connection) {
+        // TODO
+        try {
+            connection.expose(message.getInterest());
+        } catch (SharkException e) {
+            e.printStackTrace();
+        }
     }
 
     public void startRouting() {
@@ -162,20 +170,16 @@ public class RouterKP extends ASIPPort{
     }
 
     private void checkMessagesToRoute() {
-        try {
-            List<MessageDTO> messages = mMessageContentProvider.getAllMessages();
-            for (int i = messages.size() - 1; i >=0; i--) {
-                MessageDTO message = messages.get(i);
-                if (message.getReceiverPeer() != null) {
-                    this.checkReceiverPeer(message);
-                } else if (message.getReceiverSpatial() != null) {
-                    this.checkReceiverSpatial(message);
-                } else if (message.getReceiverTime() != null) {
-                    this.checkReceiverTime(message);
-                }
+        List<MessageDTO> messages = mMessageContentProvider.getAllMessages();
+        for (int i = messages.size() - 1; i >= 0; i--) {
+            MessageDTO message = messages.get(i);
+            if (message.getReceiverPeer() != null) {
+                this.checkReceiverPeer(message);
+            } else if (message.getReceiverSpatial() != null) {
+                this.checkReceiverSpatial(message);
+            } else if (message.getReceiverTime() != null) {
+                this.checkReceiverTime(message);
             }
-        } catch (SharkKBException e) {
-            e.printStackTrace();
         }
     }
 
