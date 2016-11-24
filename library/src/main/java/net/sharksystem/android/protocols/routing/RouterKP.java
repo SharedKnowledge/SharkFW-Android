@@ -113,6 +113,7 @@ public class RouterKP extends ASIPPort{
         boolean persist = false;
         if (mIsRouting) {
             boolean topicOk = false;
+            boolean messageAlreadyStored = false;
             persist = false;
 
             try {
@@ -123,6 +124,10 @@ public class RouterKP extends ASIPPort{
                 }
 
                 if (topicOk) {
+                    messageAlreadyStored = mMessageContentProvider.doesMessageAlreadyExist(msg);
+                }
+
+                if (topicOk && !messageAlreadyStored) {
                     if (msg.getReceiverPeer() != null) {
                         persist = true;
                     } else if (msg.getReceiverSpatial() != null && this.isMovementProfileCloser(msg.getReceiverSpatial())) {
@@ -136,7 +141,7 @@ public class RouterKP extends ASIPPort{
                         mMessageContentProvider.persist(msg, mMaxCopies);
                     }
                 }
-            } catch (SharkKBException | ParseException | IOException | JSONException e) {
+            } catch (SharkKBException | ParseException e) {
                 e.printStackTrace();
             }
         }

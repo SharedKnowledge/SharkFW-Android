@@ -1,11 +1,16 @@
 package net.sharksystem.android.protocols.routing.db;
 
+import net.sharkfw.asip.engine.ASIPInMessage;
 import net.sharkfw.knowledgeBase.PeerSemanticTag;
 import net.sharkfw.knowledgeBase.STSet;
 import net.sharkfw.knowledgeBase.SemanticNet;
 import net.sharkfw.knowledgeBase.SemanticTag;
+import net.sharkfw.knowledgeBase.SharkKBException;
 import net.sharkfw.knowledgeBase.SpatialSemanticTag;
 import net.sharkfw.knowledgeBase.TimeSemanticTag;
+import net.sharksystem.android.protocols.routing.Utils;
+
+import org.json.JSONException;
 
 public class MessageDTO {
     private long id;
@@ -170,5 +175,37 @@ public class MessageDTO {
 
     public void setContent(String content) {
         this.content = content;
+    }
+
+    // TODO Receivers
+    public boolean contentEquals(ASIPInMessage other) {
+        if (!this.sender.identical(other.getSender()))
+            return false;
+
+        if (!this.receiverPeer.identical(other.getReceiverPeer()))
+            return false;
+
+        if (!this.receiverSpatial.identical(other.getReceiverSpatial()))
+            return false;
+
+        if (!this.receiverTime.identical(other.getReceiverTime()))
+            return false;
+
+        if (!this.topic.identical(other.getTopic()))
+            return false;
+
+        if (!this.type.identical(other.getType()))
+            return false;
+
+        String otherContent = Utils.getContent(other);
+        if (this.content != null && !this.content.equals(otherContent)) {
+            return false;
+        }
+
+        if(otherContent != null && otherContent.equals(this.content)) {
+            return false;
+        }
+
+        return true;
     }
 }
