@@ -24,7 +24,6 @@ public class MessageContentProvider {
             MySQLiteHelper.COLUMN_ENCRYPTED,
             MySQLiteHelper.COLUMN_ENCRYPTED_SESSION_KEY,
             MySQLiteHelper.COLUMN_SIGNED,
-            //MySQLiteHelper.COLUMN_SIGNATURE,
             MySQLiteHelper.COLUMN_TTL,
             MySQLiteHelper.COLUMN_COPIES,
             MySQLiteHelper.COLUMN_COMMAND,
@@ -32,10 +31,12 @@ public class MessageContentProvider {
             MySQLiteHelper.COLUMN_TYPE,
             MySQLiteHelper.COLUMN_SENDER,
             MySQLiteHelper.COLUMN_RECEIVERS,
+            //MySQLiteHelper.COLUMN_SIGNATURE,
             MySQLiteHelper.COLUMN_RECEIVERPEER,
             MySQLiteHelper.COLUMN_RECEIVERLOCATION,
             MySQLiteHelper.COLUMN_RECEIVERTIME,
-            MySQLiteHelper.COLUMN_CONTENT};
+            MySQLiteHelper.COLUMN_CONTENT,
+            MySQLiteHelper.COLUMN_INSERTION_DATE};
 
     private String[] allReceiversColumns = { MySQLiteHelper.COLUMN_ID,
             MySQLiteHelper.COLUMN_MESSAGE_ID,
@@ -47,7 +48,7 @@ public class MessageContentProvider {
 
     //TODO Signature
     //TODO is the topic right? as it is derived from ASIPMessage
-    public void persist(ASIPInMessage msg, int maxCopies) {
+    public void persist(ASIPInMessage msg) {
         SQLiteDatabase database = dbHelper.getWritableDatabase();
 
         ContentValues values = new ContentValues();
@@ -58,8 +59,9 @@ public class MessageContentProvider {
         values.put(MySQLiteHelper.COLUMN_SIGNED, msg.isSigned());
         //values.put(MySQLiteHelper.SIGNATURE, msg.getSignature());
         values.put(MySQLiteHelper.COLUMN_TTL, msg.getTtl());
-        values.put(MySQLiteHelper.COLUMN_COPIES, maxCopies);
+        values.put(MySQLiteHelper.COLUMN_COPIES, 0);
         values.put(MySQLiteHelper.COLUMN_COMMAND, msg.getCommand());
+        values.put(MySQLiteHelper.COLUMN_INSERTION_DATE, System.currentTimeMillis());
         try {
             values.put(MySQLiteHelper.COLUMN_TOPIC, msg.getTopic() != null ? ASIPSerializer.serializeTag(msg.getTopic()).toString() : "");
             values.put(MySQLiteHelper.COLUMN_TYPE, msg.getType() != null ? ASIPSerializer.serializeTag(msg.getType()).toString() : "");
@@ -173,6 +175,7 @@ public class MessageContentProvider {
             messageDTO.setReceiverSpatial(ASIPSerializer.deserializeSpatialTag(cursor.getString(14)));
             messageDTO.setReceiverTime(ASIPSerializer.deserializeTimeTag(cursor.getString(15)));
             messageDTO.setContent(cursor.getString(16));
+            messageDTO.setInsertionDate(cursor.getLong(17));
         } catch (SharkKBException e) {
             e.printStackTrace();
         }

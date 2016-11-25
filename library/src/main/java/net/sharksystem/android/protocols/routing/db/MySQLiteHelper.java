@@ -71,7 +71,8 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
             + COLUMN_RECEIVERPEER + " text, "
             + COLUMN_RECEIVERLOCATION + " text, "
             + COLUMN_RECEIVERTIME +  " text, "
-            + COLUMN_CONTENT + " text);";
+            + COLUMN_CONTENT + " text, "
+            + COLUMN_INSERTION_DATE + " signed bigint);";
 
     private static final String DATABASE_CREATE_SENT_MESSAGES =
             "create table "

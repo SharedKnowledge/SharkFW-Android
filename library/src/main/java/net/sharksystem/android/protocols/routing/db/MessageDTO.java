@@ -17,7 +17,7 @@ public class MessageDTO {
     private boolean signed;
     private String signature;
     private long ttl;
-    private int sentCopies;
+    private long sentCopies;
     private int command;
     private SemanticTag topic;
     private SemanticTag type;
@@ -27,6 +27,7 @@ public class MessageDTO {
     private SpatialSemanticTag receiverSpatial;
     private TimeSemanticTag receiverTime;
     private String content;
+    private long insertionDate;
 
     public long getId() {
         return id;
@@ -92,7 +93,7 @@ public class MessageDTO {
         this.ttl = ttl;
     }
 
-    public int getSentCopies() {
+    public long getSentCopies() {
         return sentCopies;
     }
 
@@ -170,6 +171,14 @@ public class MessageDTO {
 
     public void setContent(String content) {
         this.content = content;
+    }
+
+    public long getInsertionDate() {
+        return insertionDate;
+    }
+
+    public void setInsertionDate(long insertionDate) {
+        this.insertionDate = insertionDate;
     }
 
     // TODO Receivers
