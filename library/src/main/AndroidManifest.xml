@@ -16,10 +16,10 @@
             android:enabled="true" />
 
         <service
-            android:name="net.sharksystem.android.protocols.routing.service.LocationService"
+            android:name="net.sharksystem.android.protocols.routing.location.LocationService"
             android:enabled="true" />
 
-        <service android:name="net.sharksystem.android.peer.RoutingService" android:enabled="true" />
+        <service android:name="net.sharksystem.android.protocols.routing.service.RoutingService" android:enabled="true" />
 
         <receiver android:name="net.sharksystem.android.protocols.routing.serviceOLD.LocationReceiverOld" android:process=":remote" >
 

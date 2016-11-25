@@ -1,4 +1,4 @@
-package net.sharksystem.android.protocols.routing.service;
+package net.sharksystem.android.protocols.routing.location;
 
 import android.app.Service;
 import android.content.Context;
@@ -10,11 +10,46 @@ import android.util.Log;
 import android.view.Gravity;
 import android.widget.Toast;
 
+import net.sharksystem.android.protocols.routing.service.MovingRouterLocationListener;
+
+// TODO
+// -----------------------VARIABLES-----------------------------------------------------------------
+//public static final int DEFAULT_MIN_DISTANCE = 1000;
+//public static final int DEFAULT_LOCATION_CHECK_INTERVAL = 2 * 60 * 1000;
+
+//private CoordinateContentProvider mCoordinateContentProvider;
+//private AlarmManager mAlarmManager;
+//private PendingIntent mLocationIntent;
+//--------------------------------------------------------------------------------------------------
+
+//--------------------------------ROUTERKP CONSTRUCTOR----------------------------------------------
+//mCoordinateContentProvider = new CoordinateContentProvider(context);
+
+//mAlarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+//Intent intentToFire = new Intent(context, LocationReceiver.class);
+//intentToFire.putExtra(LocationService.TAG_COORDINATE_TTL, coordinateTTL);
+//mLocationIntent = PendingIntent.getBroadcast(context, 0, intentToFire, PendingIntent.FLAG_CANCEL_CURRENT);
+//--------------------------------------------------------------------------------------------------
+
+
+//----------------------------------START/STOP------------------------------------------------------
+//public void enableRouting() {
+//        mAlarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), DEFAULT_LOCATION_CHECK_INTERVAL, mLocationIntent);
+//        }
+//
+//public void disableRouting() {
+//        mAlarmManager.cancel(mLocationIntent);
+//        LocationReceiver.stopLocationListener();
+//        }
+//--------------------------------------------------------------------------------------------------
 public class LocationService extends Service
 {
     private LocationManager mLocationManager = null;
 
     private static final String TAG = "LOCATION";
+
+    public static final String TAG_COORDINATE_TTL = "coordinateTTL";
+    public static final long DEFAULT_COORDINATE_TTL = 24 * 60 * 60 * 1000; //days in milliseconds
 
     private static final int LOCATION_INTERVAL = 1 * 60 * 1000; //One minute
     private static final float LOCATION_DISTANCE = 0;

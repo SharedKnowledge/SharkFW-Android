@@ -1,4 +1,4 @@
-package net.sharksystem.android.peer;
+package net.sharksystem.android.protocols.routing.service;
 
 import android.app.Service;
 import android.content.Context;
@@ -12,6 +12,7 @@ import android.util.Log;
 import net.sharkfw.kep.SharkProtocolNotSupportedException;
 import net.sharkfw.knowledgeBase.STSet;
 import net.sharkfw.system.L;
+import net.sharksystem.android.peer.AndroidSharkEngine;
 import net.sharksystem.android.protocols.routing.RouterKP;
 
 import java.io.IOException;
@@ -26,10 +27,9 @@ public class RoutingService extends Service {
 
     public static final String SHARK_KEY = "net.sharksystem.android";
     public static final String IS_ROUTING_ENABLED_KEY = SHARK_KEY + ".isRoutingEnabled";
-    public static final String IS_ENGINE_RUNNING_KEY = SHARK_KEY + ".isEngineRunning";
 
     private IBinder _binder = new LocalBinder();
-    private boolean mIsEngingeStarted = false;
+    private boolean mRoutingStarted = false;
 
     private AndroidSharkEngine mEngine;
     private RouterKP mRouterKP;
@@ -44,72 +44,53 @@ public class RoutingService extends Service {
         mRouterKP = new RouterKP(mEngine, this);
 
         Log.e("SERVICE", "Service created");
-
 //        testing();
     }
 
+    // TODO Start service when android starts
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null) {
             Log.e("SERVICE", "Service started");
         } else {
             Log.e("SERVICE", "Service RE-started");
-            if (mPrefs.getBoolean(IS_ENGINE_RUNNING_KEY, false)) {
-                startEngine();
-            }
             if (mPrefs.getBoolean(IS_ROUTING_ENABLED_KEY, false)) {
                 startRouting();
             }
         }
 
-        return START_NOT_STICKY;
-    }
-
-    public void startRouting() {
-        Log.e("ROUTING", "Routing started");
-
-        mRouterKP.startRouting();
-
-        mPrefs.edit().putBoolean(IS_ROUTING_ENABLED_KEY, true).apply();
-    }
-
-    public void stopRouting() {
-        Log.e("ROUTING", "Routing stopped");
-
-        mRouterKP.stopRouting();
-
-        mPrefs.edit().putBoolean(IS_ROUTING_ENABLED_KEY, false).apply();
+        return START_STICKY;
     }
 
     // TODO offerInterest really necessary? Exception otherwise
-    public void startEngine() {
-        L.d("Starting", this);
-        if (!mIsEngingeStarted) {
+    public void startRouting() {
+        if (!mRoutingStarted) {
             try {
                 mEngine.offerInterest("Interest", "Name");
                 mEngine.startWifiDirect();
                 mEngine.startTCP(7072);
+                mRouterKP.startRouting();
             } catch (IOException | SharkProtocolNotSupportedException e) {
                 e.printStackTrace();
             }
-            mIsEngingeStarted = true;
+            mRoutingStarted = true;
 
-            mPrefs.edit().putBoolean(IS_ENGINE_RUNNING_KEY, true).apply();
+            mPrefs.edit().putBoolean(IS_ROUTING_ENABLED_KEY, true).apply();
         }
     }
 
-    public void stopEngine() {
-        if (mIsEngingeStarted) {
-            L.d("Stop Wifi", this);
+    public void stopRouting() {
+        if (mRoutingStarted) {
             try {
                 mEngine.stopWifiDirect();
                 mEngine.stopTCP();
+                mRouterKP.stopRouting();
             } catch (SharkProtocolNotSupportedException e) {
                 e.printStackTrace();
             }
-            mIsEngingeStarted = false;
+            mRoutingStarted = false;
 
-            mPrefs.edit().putBoolean(IS_ENGINE_RUNNING_KEY, false).apply();
+            mPrefs.edit().putBoolean(IS_ROUTING_ENABLED_KEY, false).apply();
         }
     }
 
@@ -117,7 +98,7 @@ public class RoutingService extends Service {
     public void onDestroy() {
         Log.e("SERVICE", "Service destroyed");
 
-        stopEngine();
+        stopRouting();
     }
 
     @Override
@@ -145,6 +126,4 @@ public class RoutingService extends Service {
             e.printStackTrace();
         }
     }
-
-
 }

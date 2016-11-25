@@ -1,4 +1,4 @@
-package net.sharksystem.android.protocols.routing;
+package net.sharksystem.android.protocols.routing.location;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -15,6 +15,7 @@ import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.GeometryFactory;
 
+import net.sharksystem.android.protocols.routing.RouterKP;
 import net.sharksystem.android.protocols.routing.db.CoordinateContentProvider;
 import net.sharksystem.android.protocols.routing.db.CoordinateDTO;
 
@@ -55,7 +56,7 @@ public class LocationReceiver extends BroadcastReceiver {
     public void onReceive(final Context context, Intent intent) {
         Log.e("LOCATION", "onReceive");
         mContext = context;
-        mTimeToLive = intent.getLongExtra(RouterKP.TAG_COORDINATE_TTL, RouterKP.DEFAULT_COORDINATE_TTL);
+        mTimeToLive = intent.getLongExtra(LocationService.TAG_COORDINATE_TTL, LocationService.DEFAULT_COORDINATE_TTL);
         mLocationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
         if (mLocationManager.isProviderEnabled(_provider)) {
             mLocationManager.requestLocationUpdates(_provider, 0, 0, _locationListener);

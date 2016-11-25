@@ -1,4 +1,4 @@
-package net.sharksystem.android.peer;
+package net.sharksystem.android.protocols.routing.service;
 
 import android.app.ActivityManager;
 import android.content.ComponentName;
@@ -12,7 +12,7 @@ import net.sharkfw.knowledgeBase.STSet;
 
 public class RoutingServiceController implements ServiceConnection {
     private boolean mIsBound;
-    private Intent mSharkIntent = null;
+    private Intent mRoutingIntent = null;
     private Context mContext = null;
     private static RoutingServiceController mInstance;
     private RoutingService mRoutingService;
@@ -25,41 +25,25 @@ public class RoutingServiceController implements ServiceConnection {
 
     private RoutingServiceController(Context context) {
         mContext = context.getApplicationContext();
-        mSharkIntent = new Intent(mContext, RoutingService.class);
+        mRoutingIntent = new Intent(mContext, RoutingService.class);
     }
 
-    public void startShark(){
+    public void enableRouting() {
         if (!isSharkRunning()) {
             Log.e("CONTROLLER", "Service not running, starting it");
-            mContext.startService(mSharkIntent);
+            mContext.startService(mRoutingIntent);
         }
         if(!mIsBound){
-            mIsBound = mContext.bindService(mSharkIntent, this, Context.BIND_AUTO_CREATE);
+            mIsBound = mContext.bindService(mRoutingIntent, this, Context.BIND_AUTO_CREATE);
         }
     }
 
-    public void stopShark(){
-        mContext.stopService(mSharkIntent);
+    public void disableRouting() {
+        mContext.stopService(mRoutingIntent);
         if (mIsBound) {
             mContext.unbindService(this);
             mIsBound = false;
             mRoutingService = null;
-        }
-    }
-
-    public void startRouting() {
-        if (mRoutingService != null) {
-            mRoutingService.startRouting();
-        } else {
-            // ?
-        }
-    }
-
-    public void stopRouting() {
-        if (mRoutingService != null) {
-            mRoutingService.stopRouting();
-        } else {
-            // ?
         }
     }
 
@@ -77,7 +61,7 @@ public class RoutingServiceController implements ServiceConnection {
         mRoutingService = localBinder.getInstance();
 
         // Set engine and kp if wanted
-        mRoutingService.startEngine();
+        mRoutingService.startRouting();
     }
 
     @Override

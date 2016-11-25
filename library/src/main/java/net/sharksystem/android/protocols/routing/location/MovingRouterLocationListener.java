@@ -1,4 +1,4 @@
-package net.sharksystem.android.protocols.routing;
+package net.sharksystem.android.protocols.routing.location;
 
 import android.content.Context;
 import android.location.Location;
