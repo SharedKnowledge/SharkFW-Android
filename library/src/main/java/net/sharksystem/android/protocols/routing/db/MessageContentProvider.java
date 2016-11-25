@@ -103,17 +103,17 @@ public class MessageContentProvider {
         values.put(MySQLiteHelper.COLUMN_COPIES, msg.getChecks());
         values.put(MySQLiteHelper.COLUMN_COMMAND, msg.getCommand());
         try {
-            values.put(MySQLiteHelper.COLUMN_SENDER, msg.getSender() != null ? ASIPSerializer.serializeTag(msg.getSender()).toString() : "");
             values.put(MySQLiteHelper.COLUMN_TOPIC, msg.getTopic() != null ? ASIPSerializer.serializeTag(msg.getTopic()).toString() : "");
             values.put(MySQLiteHelper.COLUMN_TYPE, msg.getType() != null ? ASIPSerializer.serializeTag(msg.getType()).toString() : "");
+            values.put(MySQLiteHelper.COLUMN_SENDER, msg.getSender() != null ? ASIPSerializer.serializeTag(msg.getSender()).toString() : "");
             values.put(MySQLiteHelper.COLUMN_RECEIVERS, msg.getReceivers() != null ? ASIPSerializer.serializeSTSet(msg.getReceivers()).toString() : "");
             values.put(MySQLiteHelper.COLUMN_RECEIVERPEER, msg.getReceiverPeer() != null ? ASIPSerializer.serializeTag(msg.getReceiverPeer()).toString() : "");
             values.put(MySQLiteHelper.COLUMN_RECEIVERLOCATION, msg.getReceiverSpatial() != null ? ASIPSerializer.serializeTag(msg.getReceiverSpatial()).toString() : "");
             values.put(MySQLiteHelper.COLUMN_RECEIVERTIME, msg.getReceiverTime() != null ? ASIPSerializer.serializeTag(msg.getReceiverTime()).toString() : "");
+            values.put(MySQLiteHelper.COLUMN_CONTENT, msg.getContent());
         } catch (JSONException | SharkKBException e) {
             e.printStackTrace();
         }
-        values.put(MySQLiteHelper.COLUMN_CONTENT, msg.getContent());
 
         database.update(MySQLiteHelper.TABLE_MESSAGES, values, "_id="+msg.getId(), null);
 
@@ -168,22 +168,22 @@ public class MessageContentProvider {
         messageDTO.setEncrypted(cursor.getInt(3) > 0);
         messageDTO.setEncryptedSessionKey(cursor.getString(4));
         messageDTO.setSigned(cursor.getInt(5) > 0);
-        //messageDTO.setSignature(cursor.getString(6));
         messageDTO.setTtl(cursor.getLong(6));
         messageDTO.setChecks(cursor.getLong(7));
         messageDTO.setCommand(cursor.getInt(8));
         try {
-            messageDTO.setSender(ASIPSerializer.deserializePeerTag(cursor.getString(9)));
-            messageDTO.setTopic(ASIPSerializer.deserializeTag(cursor.getString(10)));
-            messageDTO.setType(ASIPSerializer.deserializeTag(cursor.getString(11)));
+            messageDTO.setTopic(ASIPSerializer.deserializeTag(cursor.getString(9)));
+            messageDTO.setType(ASIPSerializer.deserializeTag(cursor.getString(10)));
+            messageDTO.setSender(ASIPSerializer.deserializePeerTag(cursor.getString(11)));
             //messageDTO.setReceivers(ASIPSerializer.deserializeSTSet(cursor.getString(12)));
+            //messageDTO.setSignature(cursor.getString(13));
             messageDTO.setReceiverPeer(ASIPSerializer.deserializePeerTag(cursor.getString(13)));
             messageDTO.setReceiverSpatial(ASIPSerializer.deserializeSpatialTag(cursor.getString(14)));
             messageDTO.setReceiverTime(ASIPSerializer.deserializeTimeTag(cursor.getString(15)));
+            messageDTO.setContent(cursor.getString(16));
         } catch (SharkKBException e) {
             e.printStackTrace();
         }
-        messageDTO.setContent(cursor.getString(16));
 
         //TODO content is just a string right now..can be interest or knowledge or raw though
         return messageDTO;

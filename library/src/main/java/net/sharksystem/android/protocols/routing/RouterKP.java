@@ -156,17 +156,19 @@ public class RouterKP extends ASIPPort {
         }
     }
 
+    // TODO
     public void startRouting() {
         mIsRouting = true;
-        mAlarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), DEFAULT_LOCATION_CHECK_INTERVAL, mLocationIntent);
-        mHandler.postDelayed(mRunnable, MESSAGE_CHECK_INTERVAL);
+//        mAlarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), DEFAULT_LOCATION_CHECK_INTERVAL, mLocationIntent);
+//        mHandler.postDelayed(mRunnable, MESSAGE_CHECK_INTERVAL);
     }
 
+    // TODO
     public void stopRouting() {
         mIsRouting = false;
-        mAlarmManager.cancel(mLocationIntent);
-        LocationReceiver.stopLocationListener();
-        mHandler.removeCallbacks(mRunnable);
+//        mAlarmManager.cancel(mLocationIntent);
+//        LocationReceiver.stopLocationListener();
+//        mHandler.removeCallbacks(mRunnable);
     }
 
     private void checkMessagesToRoute() {
