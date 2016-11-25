@@ -128,10 +128,10 @@ public class MovingRouterLocationListener implements LocationListener {
     }
 
     private void decreaseChecks(MessageDTO message) throws JSONException, SharkKBException {
-//        long checks = message.getChecks();
+//        long checks = message.getSentCopies();
 //        if (checks > 1) {
 //            checks--;
-//            message.setChecks(checks);
+//            message.setSentCopies(checks);
 //            _messageContentProvider.update(message);
 //        } else {
 //            // TODO real broadcast

@@ -315,6 +315,7 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine implements KPNoti
         ((WifiDirectStreamStub) currentStub).sendBroadcast(knowledge);
     }
 
+    // TODO who should be the sender here? the original sender peer, as we only route, or the router now?
     public void sendMessage(final MessageDTO message, final String[] addresses) {
         new Thread(new Runnable() {
             @Override

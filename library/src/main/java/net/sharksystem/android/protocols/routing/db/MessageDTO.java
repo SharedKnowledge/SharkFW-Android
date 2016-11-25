@@ -3,14 +3,10 @@ package net.sharksystem.android.protocols.routing.db;
 import net.sharkfw.asip.engine.ASIPInMessage;
 import net.sharkfw.knowledgeBase.PeerSemanticTag;
 import net.sharkfw.knowledgeBase.STSet;
-import net.sharkfw.knowledgeBase.SemanticNet;
 import net.sharkfw.knowledgeBase.SemanticTag;
-import net.sharkfw.knowledgeBase.SharkKBException;
 import net.sharkfw.knowledgeBase.SpatialSemanticTag;
 import net.sharkfw.knowledgeBase.TimeSemanticTag;
 import net.sharksystem.android.protocols.routing.Utils;
-
-import org.json.JSONException;
 
 public class MessageDTO {
     private long id;
@@ -21,8 +17,7 @@ public class MessageDTO {
     private boolean signed;
     private String signature;
     private long ttl;
-    private long checks;
-
+    private int sentCopies;
     private int command;
     private SemanticTag topic;
     private SemanticTag type;
@@ -97,12 +92,12 @@ public class MessageDTO {
         this.ttl = ttl;
     }
 
-    public long getChecks() {
-        return checks;
+    public int getSentCopies() {
+        return sentCopies;
     }
 
-    public void setChecks(long checks) {
-        this.checks = checks;
+    public void setSentCopies(long sentCopies) {
+        this.sentCopies = sentCopies;
     }
 
     public int getCommand() {

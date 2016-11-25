@@ -12,7 +12,6 @@ import net.sharkfw.knowledgeBase.SharkCSAlgebra;
 import net.sharkfw.knowledgeBase.SharkKBException;
 import net.sharkfw.knowledgeBase.inmemory.InMemoSharkKB;
 import net.sharkfw.peer.ASIPPort;
-import net.sharkfw.system.SharkException;
 import net.sharksystem.android.peer.AndroidSharkEngine;
 import net.sharksystem.android.protocols.routing.db.MessageContentProvider;
 import net.sharksystem.android.protocols.routing.db.MessageDTO;
@@ -21,6 +20,7 @@ import net.sharksystem.android.protocols.routing.location.LocationService;
 import java.util.ArrayList;
 import java.util.List;
 
+// TODO what about the start of the routing? the original sender needs to insert the message he wants to send to the RouterKP's database somehow
 public class RouterKP extends ASIPPort {
     private static final String ROUTING_MESSAGE_ACCEPTED_STRING = "RoutingMessageAcceptedThisMessageShouldntBeSentByAUserOrHeHasAProblem";
 
@@ -83,10 +83,6 @@ public class RouterKP extends ASIPPort {
         mHandler.removeCallbacks(mRunnable);
     }
 
-    private void checkMessagesToRoute() {
-        Log.e("ROUTERKP", "Checking messages");
-    }
-
     // TODO message == connection ???
     @Override
     public boolean handleMessage(ASIPInMessage message, ASIPConnection connection) {
@@ -125,6 +121,9 @@ public class RouterKP extends ASIPPort {
         return persist;
     }
 
+    // TODO return response to the physical sender, not the sender peer, related to AndroidSharkEngine.sendMessage
+    // TODO how to return a short response that says that this certain, UNIQUE ASIPInMessage gets further routed by this RouterKP?
+    // TODO implement method that waits for that response
     private void sendResponse(final ASIPInMessage message, final ASIPConnection connection) {
         new Thread(new Runnable() {
             @Override
@@ -133,17 +132,22 @@ public class RouterKP extends ASIPPort {
                 response.raw(ROUTING_MESSAGE_ACCEPTED_STRING.getBytes());
             }
         }).start();
+    }
 
-        try {
-            connection.expose(message.getInterest());
-        } catch (SharkException e) {
-            e.printStackTrace();
+    // TODO Spatial Routing, Peer Routing etc.
+    private void checkMessagesToRoute() {
+        Log.e("ROUTERKP", "Checking messages");
+        List<MessageDTO> allMessages = mMessageContentProvider.getAllMessages();
+
+        for (int i = allMessages.size(); i >= 0; i--) {
+            MessageDTO message = allMessages.get(i);
+            this.forwardMessage(message);
         }
     }
 
     private void forwardMessage(MessageDTO message) {
         String[] nearbyPeerTCPAddresses = mEngine.getNearbyPeerTCPAddresses();
-        List<String> previousReceiverAdresses = mMessageContentProvider.getReceivers(message);
+        List<String> previousReceiverAdresses = mMessageContentProvider.getReceiverAddresses(message);
         List<String> addressesToSend = new ArrayList<>();
 
         for (String address : nearbyPeerTCPAddresses) {
@@ -153,7 +157,17 @@ public class RouterKP extends ASIPPort {
         }
 
         mEngine.sendMessage(message, addressesToSend.toArray(new String[addressesToSend.size()]));
-        mMessageContentProvider.updateReceivers(message, addressesToSend);
+
+        // TODO update sentCopies only after routing response
+        int sentCopies = message.getSentCopies() + addressesToSend.size();
+        if (sentCopies > mMaxCopies) {
+            Log.e("ROUTERKP", "Deleting message because max copies number exceeded");
+            mMessageContentProvider.delete(message);
+        } else {
+            message.setSentCopies(sentCopies);
+            mMessageContentProvider.updateReceiverAddresses(message, addressesToSend);
+            mMessageContentProvider.update(message);
+        }
     }
 
     public void setTopicsToRoute(STSet topics) {

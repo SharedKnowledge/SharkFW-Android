@@ -6,22 +6,14 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
 import net.sharkfw.asip.engine.ASIPInMessage;
-import net.sharkfw.asip.engine.ASIPMessage;
 import net.sharkfw.asip.engine.ASIPSerializer;
 import net.sharkfw.knowledgeBase.SharkKBException;
-import net.sharksystem.android.peer.KPListener;
 import net.sharksystem.android.protocols.routing.Utils;
 
 import org.json.JSONException;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Scanner;
 
 public class MessageContentProvider {
 
@@ -100,7 +92,7 @@ public class MessageContentProvider {
         values.put(MySQLiteHelper.COLUMN_SIGNED, msg.isSigned());
         //values.put(MySQLiteHelper.SIGNATURE, msg.getSignature());
         values.put(MySQLiteHelper.COLUMN_TTL, msg.getTtl());
-        values.put(MySQLiteHelper.COLUMN_COPIES, msg.getChecks());
+        values.put(MySQLiteHelper.COLUMN_COPIES, msg.getSentCopies());
         values.put(MySQLiteHelper.COLUMN_COMMAND, msg.getCommand());
         try {
             values.put(MySQLiteHelper.COLUMN_TOPIC, msg.getTopic() != null ? ASIPSerializer.serializeTag(msg.getTopic()).toString() : "");
@@ -169,7 +161,7 @@ public class MessageContentProvider {
         messageDTO.setEncryptedSessionKey(cursor.getString(4));
         messageDTO.setSigned(cursor.getInt(5) > 0);
         messageDTO.setTtl(cursor.getLong(6));
-        messageDTO.setChecks(cursor.getLong(7));
+        messageDTO.setSentCopies(cursor.getLong(7));
         messageDTO.setCommand(cursor.getInt(8));
         try {
             messageDTO.setTopic(ASIPSerializer.deserializeTag(cursor.getString(9)));
@@ -189,7 +181,7 @@ public class MessageContentProvider {
         return messageDTO;
     }
 
-    public List<String> getReceivers(MessageDTO message) {
+    public List<String> getReceiverAddresses(MessageDTO message) {
         SQLiteDatabase database = dbHelper.getReadableDatabase();
         List<String> receiverAddresses = new ArrayList<>();
 
@@ -204,7 +196,7 @@ public class MessageContentProvider {
         return receiverAddresses;
     }
 
-    public void updateReceivers(MessageDTO message, List<String> addressesToSend) {
+    public void updateReceiverAddresses(MessageDTO message, List<String> addressesToSend) {
         SQLiteDatabase database = dbHelper.getWritableDatabase();
 
         for (String address : addressesToSend) {
