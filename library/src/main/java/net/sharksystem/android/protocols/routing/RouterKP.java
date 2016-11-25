@@ -8,6 +8,8 @@ import net.sharkfw.asip.engine.ASIPConnection;
 import net.sharkfw.asip.engine.ASIPInMessage;
 import net.sharkfw.asip.engine.ASIPOutMessage;
 import net.sharkfw.knowledgeBase.STSet;
+import net.sharkfw.knowledgeBase.SharkCSAlgebra;
+import net.sharkfw.knowledgeBase.SharkKBException;
 import net.sharkfw.knowledgeBase.inmemory.InMemoSharkKB;
 import net.sharkfw.peer.ASIPPort;
 import net.sharksystem.android.peer.AndroidSharkEngine;
@@ -101,29 +103,29 @@ public class RouterKP extends ASIPPort {
         boolean topicOk = false;
         boolean messageAlreadyStored = false;
 
-//        try {
-//            if (message.getTopic().isAny() && mRouteAnyTopics) {
-//                topicOk = true;
-//            } else if (mTopicsToRoute.isEmpty() || SharkCSAlgebra.isIn(mTopicsToRoute, message.getTopic())) {
-//                topicOk = true;
-//            }
-//
-//            if (topicOk) {
-//                messageAlreadyStored = mMessageContentProvider.doesMessageAlreadyExist(message);
-//            }
-//
-//            // TODO Spatial Routing, Peer Routing etc.
-//            if (topicOk && !messageAlreadyStored) {
-//                persist = true;
-//
-//                if (persist) {
-//                    this.sendResponse(message, connection);
-//                    mMessageContentProvider.persist(message);
-//                }
-//            }
-//        } catch (SharkKBException e) {
-//            e.printStackTrace();
-//        }
+        try {
+            if (message.getTopic().isAny() && mRouteAnyTopics) {
+                topicOk = true;
+            } else if (mTopicsToRoute.isEmpty() || SharkCSAlgebra.isIn(mTopicsToRoute, message.getTopic())) {
+                topicOk = true;
+            }
+
+            if (topicOk) {
+                messageAlreadyStored = mMessageContentProvider.doesMessageAlreadyExist(message);
+            }
+
+            // TODO Spatial Routing, Peer Routing etc.
+            if (topicOk && !messageAlreadyStored) {
+                persist = true;
+
+                if (persist) {
+                    this.sendResponse(message, connection);
+                    mMessageContentProvider.persist(message);
+                }
+            }
+        } catch (SharkKBException e) {
+            e.printStackTrace();
+        }
 
         // TODO can other KP's still handle this if true is returned?
         return persist;

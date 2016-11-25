@@ -59,7 +59,7 @@ public class RoutingService extends Service {
             }
         }
 
-        return START_NOT_STICKY;
+        return START_STICKY;
     }
 
     // TODO offerInterest really necessary? Exception otherwise
