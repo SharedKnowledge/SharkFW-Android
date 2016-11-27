@@ -54,7 +54,6 @@ public class RouterKP extends ASIPPort {
     //------------------------- Configuration Parameters --------------------------
     //-----------------------------------------------------------------------------
     private STSet mTopicsToRoute;
-    private PeerSTSet
     private boolean mRouteAnyTopics;
     private int mMaxCopies;
     private long mMessageTtl;

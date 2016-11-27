@@ -4,6 +4,7 @@
 
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:allowBackup="true"
@@ -11,9 +12,15 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
-        <service
-            android:name="net.sharksystem.android.protocols.routing.serviceOLD.LocationServiceOld"
-            android:enabled="true" />
+        <receiver android:name=".autostart">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
+        <!--<service-->
+            <!--android:name="net.sharksystem.android.protocols.routing.serviceOLD.LocationServiceOld"-->
+            <!--android:enabled="true" />-->
 
         <service
             android:name="net.sharksystem.android.protocols.routing.location.LocationService"
@@ -21,13 +28,13 @@
 
         <service android:name="net.sharksystem.android.protocols.routing.service.RoutingService" android:enabled="true" />
 
-        <receiver android:name="net.sharksystem.android.protocols.routing.serviceOLD.LocationReceiverOld" android:process=":remote" >
+        <!--<receiver android:name="net.sharksystem.android.protocols.routing.serviceOLD.LocationReceiverOld" android:process=":remote" >-->
 
-            <!-- this Broadcast Receiver only listens to the following intent -->
-            <intent-filter>
-                <action android:name="org.mabna.order.ACTION_REFRESH_SCHEDULE_ALARM" />
-            </intent-filter>
-        </receiver>
+            <!--&lt;!&ndash; this Broadcast Receiver only listens to the following intent &ndash;&gt;-->
+            <!--<intent-filter>-->
+                <!--<action android:name="org.mabna.order.ACTION_REFRESH_SCHEDULE_ALARM" />-->
+            <!--</intent-filter>-->
+        <!--</receiver>-->
 
 
 
