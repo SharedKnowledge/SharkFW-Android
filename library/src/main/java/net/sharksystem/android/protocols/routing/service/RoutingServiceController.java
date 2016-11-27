@@ -28,10 +28,14 @@ public class RoutingServiceController implements ServiceConnection {
     private RoutingServiceController(Context context) {
         mContext = context.getApplicationContext();
         mRoutingIntent = new Intent(mContext, RoutingService.class);
+
+        if (isRoutingServiceRunning()) {
+            mIsBound = mContext.bindService(mRoutingIntent, this, Context.BIND_AUTO_CREATE);
+        }
     }
 
     public void enableRouting() {
-        if (!isSharkRunning()) {
+        if (!isRoutingServiceRunning()) {
             Log.e("CONTROLLER", "Service not running, starting it");
             mContext.startService(mRoutingIntent);
         }
@@ -71,7 +75,7 @@ public class RoutingServiceController implements ServiceConnection {
             return mRoutingService.getTopicsToRoute();
         }
         else {
-            throw new RoutingServiceNotRunningException("The Routing service isn't running yet!");
+            throw new RoutingServiceNotRunningException("Either the routing service isn't running or it isn't bound!");
         }
     }
 
@@ -80,7 +84,7 @@ public class RoutingServiceController implements ServiceConnection {
             mRoutingService.setTopicsToRoute(topics);
         }
         else {
-            throw new RoutingServiceNotRunningException("The Routing service isn't running yet!");
+            throw new RoutingServiceNotRunningException("Either the routing service isn't running or it isn't bound!");
         }
     }
 
@@ -89,7 +93,7 @@ public class RoutingServiceController implements ServiceConnection {
             return mRoutingService.getRouteAnyTopics();
         }
         else {
-            throw new RoutingServiceNotRunningException("The Routing service isn't running yet!");
+            throw new RoutingServiceNotRunningException("Either the routing service isn't running or it isn't bound!");
         }
     }
 
@@ -98,7 +102,7 @@ public class RoutingServiceController implements ServiceConnection {
             mRoutingService.setRouteAnyTopics(routeAnyTopics);
         }
         else {
-            throw new RoutingServiceNotRunningException("The Routing service isn't running yet!");
+            throw new RoutingServiceNotRunningException("Either the routing service isn't running or it isn't bound!");
         }
 
     }
@@ -108,7 +112,7 @@ public class RoutingServiceController implements ServiceConnection {
             return mRoutingService.getMaxCopies();
         }
         else {
-            throw new RoutingServiceNotRunningException("The Routing service isn't running yet!");
+            throw new RoutingServiceNotRunningException("Either the routing service isn't running or it isn't bound!");
         }
     }
 
@@ -117,7 +121,7 @@ public class RoutingServiceController implements ServiceConnection {
             mRoutingService.setMaxCopies(maxCopies);
         }
         else {
-            throw new RoutingServiceNotRunningException("The Routing service isn't running yet!");
+            throw new RoutingServiceNotRunningException("Either the routing service isn't running or it isn't bound!");
         }
 
     }
@@ -127,7 +131,7 @@ public class RoutingServiceController implements ServiceConnection {
             return mRoutingService.getMessageTtl();
         }
         else {
-            throw new RoutingServiceNotRunningException("The Routing service isn't running yet!");
+            throw new RoutingServiceNotRunningException("Either the routing service isn't running or it isn't bound!");
         }
     }
 
@@ -136,7 +140,7 @@ public class RoutingServiceController implements ServiceConnection {
             mRoutingService.setMessageTtl(messageTtl);
         }
         else {
-            throw new RoutingServiceNotRunningException("The Routing service isn't running yet!");
+            throw new RoutingServiceNotRunningException("Either the routing service isn't running or it isn't bound!");
         }
 
     }
@@ -146,7 +150,7 @@ public class RoutingServiceController implements ServiceConnection {
             return mRoutingService.getMessageTtlUnit();
         }
         else {
-            throw new RoutingServiceNotRunningException("The Routing service isn't running yet!");
+            throw new RoutingServiceNotRunningException("Either the routing service isn't running or it isn't bound!");
         }
     }
 
@@ -155,7 +159,7 @@ public class RoutingServiceController implements ServiceConnection {
             mRoutingService.setMessageTtlUnit(unit);
         }
         else {
-            throw new RoutingServiceNotRunningException("The Routing service isn't running yet!");
+            throw new RoutingServiceNotRunningException("Either the routing service isn't running or it isn't bound!");
         }
 
     }
@@ -165,7 +169,7 @@ public class RoutingServiceController implements ServiceConnection {
             return mRoutingService.getMessageCheckInterval();
         }
         else {
-            throw new RoutingServiceNotRunningException("The Routing service isn't running yet!");
+            throw new RoutingServiceNotRunningException("Either the routing service isn't running or it isn't bound!");
         }
     }
 
@@ -174,12 +178,11 @@ public class RoutingServiceController implements ServiceConnection {
             mRoutingService.setMessageCheckInterval(messageCheckInterval);
         }
         else {
-            throw new RoutingServiceNotRunningException("The Routing service isn't running yet!");
+            throw new RoutingServiceNotRunningException("Either the routing service isn't running or it isn't bound!");
         }
-
     }
 
-    private boolean isSharkRunning() {
+    private boolean isRoutingServiceRunning() {
         ActivityManager manager = (ActivityManager) mContext.getSystemService(Context.ACTIVITY_SERVICE);
         for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
             if (RoutingService.class.getName().equals(service.service.getClassName())) {

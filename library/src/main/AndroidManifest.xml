@@ -12,7 +12,7 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
-        <receiver android:name=".autostart">
+        <receiver android:name="net.sharksystem.android.protocols.routing.service.SharkServiceAutoStartReceiver">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
@@ -26,7 +26,7 @@
             android:name="net.sharksystem.android.protocols.routing.location.LocationService"
             android:enabled="true" />
 
-        <service android:name="net.sharksystem.android.protocols.routing.service.RoutingService" android:enabled="true" />
+        <service android:name="net.sharksystem.android.protocols.routing.service.RoutingService" android:enabled="true"/>
 
         <!--<receiver android:name="net.sharksystem.android.protocols.routing.serviceOLD.LocationReceiverOld" android:process=":remote" >-->
 

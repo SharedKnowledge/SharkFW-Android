@@ -49,13 +49,17 @@ public class RoutingService extends Service {
     // TODO Start service when android starts
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        if (intent != null) {
-            Log.e("SERVICE", "Service started");
+        Log.e("SERVICE", "Service started");
+
+        boolean startRouting = mPrefs.getBoolean(KEY_IS_ROUTING_ENABLED, false);
+        if (startRouting) {
+            Log.e("SERVICE", "Starting Routing");
         } else {
-            Log.e("SERVICE", "Service RE-started");
-            if (mPrefs.getBoolean(KEY_IS_ROUTING_ENABLED, false)) {
-                startRouting();
-            }
+            Log.e("SERVICE", "Notn Starting routing");
+        }
+
+        if (mPrefs.getBoolean(KEY_IS_ROUTING_ENABLED, false)) {
+            startRouting();
         }
 
         return START_STICKY;
