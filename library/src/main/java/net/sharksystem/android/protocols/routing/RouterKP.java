@@ -9,6 +9,8 @@ import net.sharkfw.asip.engine.ASIPConnection;
 import net.sharkfw.asip.engine.ASIPInMessage;
 import net.sharkfw.asip.engine.ASIPOutMessage;
 import net.sharkfw.asip.engine.ASIPSerializer;
+import net.sharkfw.knowledgeBase.PeerSTSet;
+import net.sharkfw.knowledgeBase.PeerSemanticTag;
 import net.sharkfw.knowledgeBase.STSet;
 import net.sharkfw.knowledgeBase.SharkCSAlgebra;
 import net.sharkfw.knowledgeBase.SharkKBException;
@@ -48,12 +50,11 @@ public class RouterKP extends ASIPPort {
     private AndroidSharkEngine mEngine;
     private MessageContentProvider mMessageContentProvider;
 
-    // TODO setters
-    // TODO persist settings
     //-----------------------------------------------------------------------------
     //------------------------- Configuration Parameters --------------------------
     //-----------------------------------------------------------------------------
     private STSet mTopicsToRoute;
+    private PeerSTSet
     private boolean mRouteAnyTopics;
     private int mMaxCopies;
     private long mMessageTtl;
@@ -177,12 +178,33 @@ public class RouterKP extends ASIPPort {
         if (allMessages.size() > 0) {
             for (int i = allMessages.size() - 1; i >= 0; i--) {
                 MessageDTO message = allMessages.get(i);
-                this.broadcastMessage(message);
+
+                if (message.getReceiverPeer() != null) {
+                    this.checkReceiverPeer(message);
+                } else {
+                    this.broadcastMessage(message);
+                }
+
                 this.checkMessageLifeTime(message);
             }
         }
     }
 
+    private void checkReceiverPeer(MessageDTO message) {
+        List<PeerSemanticTag> nearbyPeers = mEngine.getNearbyPeers();
+        PeerSemanticTag receiver = message.getReceiverPeer();
+
+        for (PeerSemanticTag peer : nearbyPeers) {
+            if (peer.identical(receiver)) {
+                mEngine.sendMessage(message, message.getReceiverPeer().getAddresses());
+                mMessageContentProvider.delete(message);
+                return;
+            }
+        }
+
+        //Receiver is not nearby, so try to send it to as many new ppl as possible
+        this.broadcastMessage(message);
+    }
     private void broadcastMessage(MessageDTO message) {
         String[] nearbyPeerTCPAddresses = mEngine.getNearbyPeerTCPAddresses();
         List<String> previousReceiverAdresses = mMessageContentProvider.getReceiverAddresses(message);
