@@ -1,12 +1,14 @@
 package net.sharksystem.android.protocols.routing;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Handler;
 import android.util.Log;
 
 import net.sharkfw.asip.engine.ASIPConnection;
 import net.sharkfw.asip.engine.ASIPInMessage;
 import net.sharkfw.asip.engine.ASIPOutMessage;
+import net.sharkfw.asip.engine.ASIPSerializer;
 import net.sharkfw.knowledgeBase.STSet;
 import net.sharkfw.knowledgeBase.SharkCSAlgebra;
 import net.sharkfw.knowledgeBase.SharkKBException;
@@ -15,18 +17,32 @@ import net.sharkfw.peer.ASIPPort;
 import net.sharksystem.android.peer.AndroidSharkEngine;
 import net.sharksystem.android.protocols.routing.db.MessageContentProvider;
 import net.sharksystem.android.protocols.routing.db.MessageDTO;
-import net.sharksystem.android.protocols.routing.location.LocationService;
+
+import org.json.JSONException;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import static net.sharksystem.android.protocols.routing.service.RoutingService.KEY_SHARK;
+
 // TODO what about the start of the routing? the original sender needs to insert the message he wants to send to the RouterKP's database somehow
 public class RouterKP extends ASIPPort {
+
+    //-----------------------------------------------------------------------------
+    //------------------------------- Constants -----------------------------------
+    //-----------------------------------------------------------------------------
     private static final String ROUTING_MESSAGE_ACCEPTED_STRING = "RoutingMessageAcceptedThisMessageShouldntBeSentByAUserOrHeHasAProblem";
+    private static final String KEY_TOPICS_TO_ROUTE = KEY_SHARK + ".topicsToRoute";
+    private static final String KEY_ROUTE_ANY_TOPICS = KEY_SHARK + ".routeAnyTopics";
+    private static final String KEY_MAX_COPIES = KEY_SHARK + ".maxCopies";
+    private static final String KEY_MESSAGE_TTL = KEY_SHARK + ".messageTtl";
+    private static final String KEY_MESSAGE_TTL_UNIT = KEY_SHARK + ".messageTtlUnit";
+    private static final String KEY_MESSAGE_CHECK_INTERVAL = KEY_SHARK + ".messageCheckInterval";
 
     //-----------------------------------------------------------------------------
     //------------------------------- Objects -------------------------------------
     //-----------------------------------------------------------------------------
+    private SharedPreferences mPrefs;
     private Handler mHandler;
     private Runnable mRunnable;
     private AndroidSharkEngine mEngine;
@@ -42,30 +58,24 @@ public class RouterKP extends ASIPPort {
     private int mMaxCopies;
     private long mMessageTtl;
     private TimeUnit mMessageTtlUnit;
+    private int mMessageCheckinterval;
 
     //-----------------------------------------------------------------------------
     //------------------------- Configuration Defaults-- --------------------------
     //-----------------------------------------------------------------------------
-    private static final STSet DEFAULT_TOPICS_TO_ROUTE = null;
+    private static final STSet DEFAULT_TOPICS_TO_ROUTE = InMemoSharkKB.createInMemoSTSet();
     private static final boolean DEFAULT_ROUTE_ANY_TOPICS = false;
     private static final int DEFAULT_MAX_COPIES = 10;
-    private static final int MESSAGE_CHECK_INTERVAL = 2000;
     private static final long DEFAULT_MESSAGE_TTL = 30;
     private static final TimeUnit DEFAULT_MESSAGE_TTL_UNIT = TimeUnit.SECONDS;
+    private static final int MESSAGE_CHECK_INTERVAL = 2000;
 
     public RouterKP(AndroidSharkEngine engine, Context context) {
-        this(engine, context, DEFAULT_TOPICS_TO_ROUTE, DEFAULT_ROUTE_ANY_TOPICS, DEFAULT_MAX_COPIES, DEFAULT_MESSAGE_TTL, DEFAULT_MESSAGE_TTL_UNIT, LocationService.DEFAULT_COORDINATE_TTL);
-    }
-
-    public RouterKP(AndroidSharkEngine engine, Context context, STSet topics, boolean routeAnyTopics, int maxCopies, long messageTtl, TimeUnit messageTtlUnit, long coordinateTTL) {
         super(engine);
         mEngine = engine;
+        mPrefs = context.getSharedPreferences(KEY_SHARK, Context.MODE_PRIVATE);
 
-        mTopicsToRoute = (topics != null) ? topics : InMemoSharkKB.createInMemoSTSet();
-        mRouteAnyTopics = routeAnyTopics;
-        mMaxCopies = maxCopies;
-        mMessageTtl = messageTtl;
-        mMessageTtlUnit = messageTtlUnit;
+        this.initConfiguration();
 
         mMessageContentProvider = new MessageContentProvider(context);
 
@@ -77,6 +87,20 @@ public class RouterKP extends ASIPPort {
                 mHandler.postDelayed(mRunnable, MESSAGE_CHECK_INTERVAL);
             }
         };
+    }
+
+    private void initConfiguration() {
+        try {
+            String defaultTopicsToRouteString = ASIPSerializer.serializeSTSet(DEFAULT_TOPICS_TO_ROUTE).toString();
+            String topicsToRouteString = mPrefs.getString(KEY_TOPICS_TO_ROUTE, defaultTopicsToRouteString);
+            mTopicsToRoute = ASIPSerializer.deserializeSTSet(topicsToRouteString);
+        } catch (SharkKBException | JSONException e) {
+            e.printStackTrace();
+        }
+        mRouteAnyTopics = mPrefs.getBoolean(KEY_ROUTE_ANY_TOPICS, DEFAULT_ROUTE_ANY_TOPICS);
+        mMaxCopies = mPrefs.getInt(KEY_MAX_COPIES, DEFAULT_MAX_COPIES);
+        mMessageTtl = mPrefs.getLong(KEY_MESSAGE_TTL, DEFAULT_MESSAGE_TTL);
+        mMessageTtlUnit = TimeUnit.valueOf(mPrefs.getString(KEY_MESSAGE_TTL_UNIT, DEFAULT_MESSAGE_TTL_UNIT.toString()));
     }
 
     public void startRouting() {
@@ -196,7 +220,62 @@ public class RouterKP extends ASIPPort {
         }
     }
 
+    public STSet getTopicsToRoute() {
+        return mTopicsToRoute;
+    }
+
     public void setTopicsToRoute(STSet topics) {
-        this.mTopicsToRoute = topics;
+        mTopicsToRoute = topics;
+        try {
+            String topicsToRouteString = ASIPSerializer.serializeSTSet(topics).toString();
+            mPrefs.edit().putString(KEY_TOPICS_TO_ROUTE, topicsToRouteString).apply();
+        } catch (SharkKBException | JSONException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public boolean getRouteAnyTopics() {
+        return mRouteAnyTopics;
+    }
+
+    public void setRouteAnyTopics(boolean routeAnyTopics) {
+        mRouteAnyTopics = routeAnyTopics;
+        mPrefs.edit().putBoolean(KEY_ROUTE_ANY_TOPICS, routeAnyTopics).apply();
+    }
+
+    public int getMessageCheckInterval() {
+        return mMessageCheckinterval;
+    }
+
+    public void setMessageCheckInterval(int messageCheckInterval) {
+        mMessageCheckinterval = messageCheckInterval;
+        mPrefs.edit().putInt(KEY_MESSAGE_CHECK_INTERVAL, messageCheckInterval).apply();
+    }
+
+    public TimeUnit getMessageTtlUnit() {
+        return mMessageTtlUnit;
+    }
+
+    public void setMessageTtlUnit(TimeUnit messageTtlUnit) {
+        mMessageTtlUnit = messageTtlUnit;
+        mPrefs.edit().putString(KEY_MESSAGE_TTL_UNIT, messageTtlUnit.toString()).apply();
+    }
+
+    public long getMessageTtl() {
+        return mMessageTtl;
+    }
+
+    public void setMessageTtl(long messageTtl) {
+        mMessageTtl = messageTtl;
+        mPrefs.edit().putLong(KEY_MESSAGE_TTL, messageTtl).apply();
+    }
+
+    public int getMaxCopies() {
+        return mMaxCopies;
+    }
+
+    public void setMaxCopies(int maxCopies) {
+        mMaxCopies = maxCopies;
+        mPrefs.edit().putInt(KEY_MAX_COPIES, maxCopies).apply();
     }
 }

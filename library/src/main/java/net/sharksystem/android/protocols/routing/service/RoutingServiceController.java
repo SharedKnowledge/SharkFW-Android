@@ -9,6 +9,8 @@ import android.os.IBinder;
 import android.util.Log;
 
 import net.sharkfw.knowledgeBase.STSet;
+import net.sharksystem.android.protocols.routing.RoutingServiceNotRunningException;
+import net.sharksystem.android.protocols.routing.TimeUnit;
 
 public class RoutingServiceController implements ServiceConnection {
     private boolean mIsBound;
@@ -47,12 +49,6 @@ public class RoutingServiceController implements ServiceConnection {
         }
     }
 
-    public void setTopicsToRoute(STSet topics) {
-        if (mRoutingService != null) {
-            mRoutingService.setTopicsToRoute(topics);
-        }
-    }
-
     @Override
     public void onServiceConnected(ComponentName name, IBinder service) {
         Log.e("CONTROLLER", "Connected to service");
@@ -68,6 +64,119 @@ public class RoutingServiceController implements ServiceConnection {
     public void onServiceDisconnected(ComponentName name) {
         mIsBound = false;
         mRoutingService = null;
+    }
+
+    public STSet getTopicsToRoute() throws RoutingServiceNotRunningException {
+        if (mRoutingService != null) {
+            return mRoutingService.getTopicsToRoute();
+        }
+        else {
+            throw new RoutingServiceNotRunningException("The Routing service isn't running yet!");
+        }
+    }
+
+    public void setTopicsToRoute(STSet topics) throws RoutingServiceNotRunningException {
+        if (mRoutingService != null) {
+            mRoutingService.setTopicsToRoute(topics);
+        }
+        else {
+            throw new RoutingServiceNotRunningException("The Routing service isn't running yet!");
+        }
+    }
+
+    public boolean getRouteAnyTopics() throws RoutingServiceNotRunningException {
+        if (mRoutingService != null) {
+            return mRoutingService.getRouteAnyTopics();
+        }
+        else {
+            throw new RoutingServiceNotRunningException("The Routing service isn't running yet!");
+        }
+    }
+
+    public void setRouteAnyTopics(boolean routeAnyTopics) throws RoutingServiceNotRunningException {
+        if (mRoutingService != null) {
+            mRoutingService.setRouteAnyTopics(routeAnyTopics);
+        }
+        else {
+            throw new RoutingServiceNotRunningException("The Routing service isn't running yet!");
+        }
+
+    }
+
+    public int getMaxCopies() throws RoutingServiceNotRunningException {
+        if (mRoutingService != null) {
+            return mRoutingService.getMaxCopies();
+        }
+        else {
+            throw new RoutingServiceNotRunningException("The Routing service isn't running yet!");
+        }
+    }
+
+    public void setMaxCopies(int maxCopies) throws RoutingServiceNotRunningException {
+        if (mRoutingService != null) {
+            mRoutingService.setMaxCopies(maxCopies);
+        }
+        else {
+            throw new RoutingServiceNotRunningException("The Routing service isn't running yet!");
+        }
+
+    }
+
+    public long getMessageTtl() throws RoutingServiceNotRunningException {
+        if (mRoutingService != null) {
+            return mRoutingService.getMessageTtl();
+        }
+        else {
+            throw new RoutingServiceNotRunningException("The Routing service isn't running yet!");
+        }
+    }
+
+    public void setMessageTtl(long messageTtl) throws RoutingServiceNotRunningException {
+        if (mRoutingService != null) {
+            mRoutingService.setMessageTtl(messageTtl);
+        }
+        else {
+            throw new RoutingServiceNotRunningException("The Routing service isn't running yet!");
+        }
+
+    }
+
+    public TimeUnit getMessageTtlUnit() throws RoutingServiceNotRunningException {
+        if (mRoutingService != null) {
+            return mRoutingService.getMessageTtlUnit();
+        }
+        else {
+            throw new RoutingServiceNotRunningException("The Routing service isn't running yet!");
+        }
+    }
+
+    public void setMessageTtlUnit(TimeUnit unit) throws RoutingServiceNotRunningException {
+        if (mRoutingService != null) {
+            mRoutingService.setMessageTtlUnit(unit);
+        }
+        else {
+            throw new RoutingServiceNotRunningException("The Routing service isn't running yet!");
+        }
+
+    }
+
+    public int getMessageCheckInterval() throws RoutingServiceNotRunningException {
+        if (mRoutingService != null) {
+            return mRoutingService.getMessageCheckInterval();
+        }
+        else {
+            throw new RoutingServiceNotRunningException("The Routing service isn't running yet!");
+        }
+    }
+
+    public void setMessageCheckInterval(int messageCheckInterval) throws RoutingServiceNotRunningException {
+        if (mRoutingService != null) {
+            mRoutingService.setMessageCheckInterval(messageCheckInterval);
+        }
+        else {
+            throw new RoutingServiceNotRunningException("The Routing service isn't running yet!");
+        }
+
     }
 
     private boolean isSharkRunning() {

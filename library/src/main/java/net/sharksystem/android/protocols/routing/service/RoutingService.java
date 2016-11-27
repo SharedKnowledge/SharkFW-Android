@@ -11,12 +11,11 @@ import android.util.Log;
 
 import net.sharkfw.kep.SharkProtocolNotSupportedException;
 import net.sharkfw.knowledgeBase.STSet;
-import net.sharkfw.system.L;
 import net.sharksystem.android.peer.AndroidSharkEngine;
 import net.sharksystem.android.protocols.routing.RouterKP;
+import net.sharksystem.android.protocols.routing.TimeUnit;
 
 import java.io.IOException;
-
 
 public class RoutingService extends Service {
     public class LocalBinder extends Binder {
@@ -25,8 +24,8 @@ public class RoutingService extends Service {
         }
     }
 
-    public static final String SHARK_KEY = "net.sharksystem.android";
-    public static final String IS_ROUTING_ENABLED_KEY = SHARK_KEY + ".isRoutingEnabled";
+    public static final String KEY_SHARK = "net.sharksystem.android";
+    public static final String KEY_IS_ROUTING_ENABLED = KEY_SHARK + ".isRoutingEnabled";
 
     private IBinder _binder = new LocalBinder();
     private boolean mRoutingStarted = false;
@@ -40,7 +39,7 @@ public class RoutingService extends Service {
     public void onCreate() {
         mEngine = new AndroidSharkEngine(this);
 
-        mPrefs = getSharedPreferences(SHARK_KEY, Context.MODE_PRIVATE);
+        mPrefs = getSharedPreferences(KEY_SHARK, Context.MODE_PRIVATE);
         mRouterKP = new RouterKP(mEngine, this);
 
         Log.e("SERVICE", "Service created");
@@ -54,7 +53,7 @@ public class RoutingService extends Service {
             Log.e("SERVICE", "Service started");
         } else {
             Log.e("SERVICE", "Service RE-started");
-            if (mPrefs.getBoolean(IS_ROUTING_ENABLED_KEY, false)) {
+            if (mPrefs.getBoolean(KEY_IS_ROUTING_ENABLED, false)) {
                 startRouting();
             }
         }
@@ -75,7 +74,7 @@ public class RoutingService extends Service {
             }
             mRoutingStarted = true;
 
-            mPrefs.edit().putBoolean(IS_ROUTING_ENABLED_KEY, true).apply();
+            mPrefs.edit().putBoolean(KEY_IS_ROUTING_ENABLED, true).apply();
         }
     }
 
@@ -90,7 +89,7 @@ public class RoutingService extends Service {
             }
             mRoutingStarted = false;
 
-            mPrefs.edit().putBoolean(IS_ROUTING_ENABLED_KEY, false).apply();
+            mPrefs.edit().putBoolean(KEY_IS_ROUTING_ENABLED, false).apply();
         }
     }
 
@@ -110,8 +109,52 @@ public class RoutingService extends Service {
         mEngine.sendBroadcast(text);
     }
 
+    public STSet getTopicsToRoute() {
+        return mRouterKP.getTopicsToRoute();
+    }
+
     public void setTopicsToRoute(STSet topics) {
         mRouterKP.setTopicsToRoute(topics);
+    }
+
+    public boolean getRouteAnyTopics() {
+        return mRouterKP.getRouteAnyTopics();
+    }
+
+    public void setRouteAnyTopics(boolean routeAnyTopics) {
+        mRouterKP.setRouteAnyTopics(routeAnyTopics);
+    }
+
+    public int getMaxCopies() {
+        return mRouterKP.getMaxCopies();
+    }
+
+    public void setMaxCopies(int maxCopies) {
+        mRouterKP.setMaxCopies(maxCopies);
+    }
+
+    public long getMessageTtl() {
+        return mRouterKP.getMessageTtl();
+    }
+
+    public void setMessageTtl(long messageTtl) {
+        mRouterKP.setMessageTtl(messageTtl);
+    }
+
+    public TimeUnit getMessageTtlUnit() {
+        return mRouterKP.getMessageTtlUnit();
+    }
+
+    public void setMessageTtlUnit(TimeUnit unit) {
+        mRouterKP.setMessageTtlUnit(unit);
+    }
+
+    public int getMessageCheckInterval() {
+        return mRouterKP.getMessageCheckInterval();
+    }
+
+    public void setMessageCheckInterval(int messageCheckInterval) {
+        mRouterKP.setMessageCheckInterval(messageCheckInterval);
     }
 
     public void testing() {
