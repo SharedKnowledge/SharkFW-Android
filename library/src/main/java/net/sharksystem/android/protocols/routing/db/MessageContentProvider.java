@@ -48,7 +48,6 @@ public class MessageContentProvider {
     }
 
     //TODO Signature
-    //TODO is the topic right? as it is derived from ASIPMessage
     public void persist(ASIPInMessage msg) {
         SQLiteDatabase database = dbHelper.getWritableDatabase();
 
@@ -83,7 +82,6 @@ public class MessageContentProvider {
 
 
     //TODO Signature
-    //TODO is the topic right? as it is derived from ASIPMessage
     public void update(MessageDTO msg) {
         SQLiteDatabase database = dbHelper.getWritableDatabase();
 
@@ -181,7 +179,6 @@ public class MessageContentProvider {
             e.printStackTrace();
         }
 
-        //TODO content is just a string right now..can be interest or knowledge or raw though
         return messageDTO;
     }
 

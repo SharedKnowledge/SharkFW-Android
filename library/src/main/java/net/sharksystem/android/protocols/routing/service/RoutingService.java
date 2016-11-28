@@ -46,7 +46,6 @@ public class RoutingService extends Service {
 //        testing();
     }
 
-    // TODO Start service when android starts
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.e("SERVICE", "Service started");
@@ -71,7 +70,7 @@ public class RoutingService extends Service {
             try {
                 mEngine.offerInterest("Interest", "Name");
                 mEngine.startWifiDirect();
-                mEngine.startTCP(7072);
+                mEngine.startTCP(7071);
                 mRouterKP.startRouting();
             } catch (IOException | SharkProtocolNotSupportedException e) {
                 e.printStackTrace();

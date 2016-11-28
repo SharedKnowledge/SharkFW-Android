@@ -117,7 +117,6 @@ public class RouterKP extends ASIPPort {
         mHandler.removeCallbacks(mRunnable);
     }
 
-    // TODO message == connection ???
     @Override
     public boolean handleMessage(ASIPInMessage message, ASIPConnection connection) {
 //        super.doProcess(msg, con);
@@ -160,19 +159,23 @@ public class RouterKP extends ASIPPort {
             e.printStackTrace();
         }
 
-        // TODO can other KP's still handle this if true is returned?
         return persist;
     }
 
-    // TODO return response to the physical sender, not the sender peer, related to AndroidSharkEngine.sendMessage
     // TODO how to return a short response that says that this certain, UNIQUE ASIPInMessage gets further routed by this RouterKP?
     // TODO implement method that waits for that response
     private void sendResponse(final ASIPInMessage message, final ASIPConnection connection) {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                ASIPOutMessage response = mEngine.createASIPOutMessage(message.getSender().getAddresses(), message.getSender());
-                response.raw(ROUTING_MESSAGE_ACCEPTED_STRING.getBytes());
+                ASIPOutMessage response = null;
+                try {
+                    response = message.createResponse(null);
+                    response.raw(ROUTING_MESSAGE_ACCEPTED_STRING.getBytes());
+                } catch (SharkKBException e) {
+                    e.printStackTrace();
+                }
+//                ASIPOutMessage response = mEngine.createASIPOutMessage(message.getSender().getAddresses(), message.getSender());
             }
         }).start();
     }
@@ -213,6 +216,7 @@ public class RouterKP extends ASIPPort {
         //Receiver is not nearby, so try to send it to as many new ppl as possible
         this.broadcastMessage(message);
     }
+
     private void broadcastMessage(MessageDTO message) {
         String[] nearbyPeerTCPAddresses = mEngine.getNearbyPeerTCPAddresses();
         List<String> previousReceiverAdresses = mMessageContentProvider.getReceiverAddresses(message);

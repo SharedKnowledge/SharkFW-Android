@@ -315,12 +315,11 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine implements KPNoti
         ((WifiDirectStreamStub) currentStub).sendBroadcast(knowledge);
     }
 
-    // TODO who should be the sender here? the original sender peer, as we only route, or the router now?
     public void sendMessage(final MessageDTO message, final String[] addresses) {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                ASIPOutMessage asipMessage = createASIPOutMessage(addresses, getOwner(), message.getReceiverPeer(), message.getReceiverSpatial(), message.getReceiverTime(), message.getTopic(), message.getType(), message.getTtl());
+                ASIPOutMessage asipMessage = createASIPOutMessage(addresses, message.getSender(), message.getReceiverPeer(), message.getReceiverSpatial(), message.getReceiverTime(), message.getTopic(), message.getType(), message.getTtl());
                 try {
                     if (message.getCommand() == ASIPMessage.ASIP_INSERT) {
                         ASIPKnowledge knowledge = ASIPSerializer.deserializeASIPKnowledge(message.getContent());
@@ -329,8 +328,7 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine implements KPNoti
                         ASIPInterest interest = ASIPSerializer.deserializeASIPInterest(message.getContent());
                         asipMessage.expose(interest);
                     } else {
-                        //TODO is this right?
-                        asipMessage.raw(message.getContent().getBytes());
+                        asipMessage.raw(message.getContent().getBytes(StandardCharsets.UTF_8));
                     }
                 } catch (SharkKBException e) {
                     e.printStackTrace();
