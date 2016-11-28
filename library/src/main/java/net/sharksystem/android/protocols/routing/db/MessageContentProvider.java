@@ -3,6 +3,7 @@ package net.sharksystem.android.protocols.routing.db;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
+import android.database.DatabaseUtils;
 import android.database.sqlite.SQLiteDatabase;
 
 import net.sharkfw.asip.engine.ASIPInMessage;
@@ -212,5 +213,11 @@ public class MessageContentProvider {
     }
 
 
+    public long getMessageCount() {
+        SQLiteDatabase database = dbHelper.getReadableDatabase();
+        long count = DatabaseUtils.queryNumEntries(database, MySQLiteHelper.TABLE_MESSAGES);
+        dbHelper.close();
 
+        return count;
+    }
 }

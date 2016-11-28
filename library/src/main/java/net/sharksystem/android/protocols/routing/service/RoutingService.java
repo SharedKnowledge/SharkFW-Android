@@ -161,6 +161,14 @@ public class RoutingService extends Service {
         mRouterKP.setMessageCheckInterval(messageCheckInterval);
     }
 
+    public int getMaxMessages() {
+        return mRouterKP.getMaxMessages();
+    }
+
+    public void setMaxMessages(int maxMessages) {
+        mRouterKP.setMaxMessages(maxMessages);
+    }
+
     public void testing() {
         WifiManager _wifiManager = (WifiManager) this.getSystemService(Context.WIFI_SERVICE);
         if (_wifiManager.isWifiEnabled())

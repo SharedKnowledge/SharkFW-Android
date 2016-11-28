@@ -9,7 +9,6 @@ import net.sharkfw.asip.engine.ASIPConnection;
 import net.sharkfw.asip.engine.ASIPInMessage;
 import net.sharkfw.asip.engine.ASIPOutMessage;
 import net.sharkfw.asip.engine.ASIPSerializer;
-import net.sharkfw.knowledgeBase.PeerSTSet;
 import net.sharkfw.knowledgeBase.PeerSemanticTag;
 import net.sharkfw.knowledgeBase.STSet;
 import net.sharkfw.knowledgeBase.SharkCSAlgebra;
@@ -40,6 +39,7 @@ public class RouterKP extends ASIPPort {
     private static final String KEY_MESSAGE_TTL = KEY_SHARK + ".messageTtl";
     private static final String KEY_MESSAGE_TTL_UNIT = KEY_SHARK + ".messageTtlUnit";
     private static final String KEY_MESSAGE_CHECK_INTERVAL = KEY_SHARK + ".messageCheckInterval";
+    private static final String KEY_MAX_MESSAGES = KEY_SHARK + ".maxMessages";
 
     //-----------------------------------------------------------------------------
     //------------------------------- Objects -------------------------------------
@@ -50,6 +50,7 @@ public class RouterKP extends ASIPPort {
     private AndroidSharkEngine mEngine;
     private MessageContentProvider mMessageContentProvider;
 
+    // TODO datatypes int, long, unsigned int
     //-----------------------------------------------------------------------------
     //------------------------- Configuration Parameters --------------------------
     //-----------------------------------------------------------------------------
@@ -58,7 +59,8 @@ public class RouterKP extends ASIPPort {
     private int mMaxCopies;
     private long mMessageTtl;
     private TimeUnit mMessageTtlUnit;
-    private int mMessageCheckinterval;
+    private int mMessageCheckInterval;
+    private int mMaxMessages;
 
     //-----------------------------------------------------------------------------
     //------------------------- Configuration Defaults-- --------------------------
@@ -69,6 +71,7 @@ public class RouterKP extends ASIPPort {
     private static final long DEFAULT_MESSAGE_TTL = 30;
     private static final TimeUnit DEFAULT_MESSAGE_TTL_UNIT = TimeUnit.SECONDS;
     private static final int MESSAGE_CHECK_INTERVAL = 2000;
+    private static final int DEFAULT_MAX_MESSAGES = 50;
 
     public RouterKP(AndroidSharkEngine engine, Context context) {
         super(engine);
@@ -101,6 +104,7 @@ public class RouterKP extends ASIPPort {
         mMaxCopies = mPrefs.getInt(KEY_MAX_COPIES, DEFAULT_MAX_COPIES);
         mMessageTtl = mPrefs.getLong(KEY_MESSAGE_TTL, DEFAULT_MESSAGE_TTL);
         mMessageTtlUnit = TimeUnit.valueOf(mPrefs.getString(KEY_MESSAGE_TTL_UNIT, DEFAULT_MESSAGE_TTL_UNIT.toString()));
+        mMaxMessages = mPrefs.getInt(KEY_MAX_MESSAGES, DEFAULT_MAX_MESSAGES);
     }
 
     public void startRouting() {
@@ -123,23 +127,28 @@ public class RouterKP extends ASIPPort {
             mMessageContentProvider.persist(message);
         }
 
+        boolean messageLimitReached = true;
         boolean persist = false;
         boolean topicOk = false;
         boolean messageAlreadyStored = false;
 
         try {
-            if (message.getTopic().isAny() && mRouteAnyTopics) {
-                topicOk = true;
-            } else if (mTopicsToRoute.isEmpty() || SharkCSAlgebra.isIn(mTopicsToRoute, message.getTopic())) {
-                topicOk = true;
+            messageLimitReached = mMessageContentProvider.getMessageCount() > mMaxMessages;
+
+            if (!messageLimitReached) {
+                if (message.getTopic().isAny() && mRouteAnyTopics) {
+                    topicOk = true;
+                } else if (mTopicsToRoute.isEmpty() || SharkCSAlgebra.isIn(mTopicsToRoute, message.getTopic())) {
+                    topicOk = true;
+                }
             }
 
-            if (topicOk) {
+            if (!messageLimitReached && topicOk) {
                 messageAlreadyStored = mMessageContentProvider.doesMessageAlreadyExist(message);
             }
 
             // TODO Spatial Routing, Peer Routing etc.
-            if (topicOk && !messageAlreadyStored) {
+            if (!messageLimitReached && topicOk && !messageAlreadyStored) {
                 persist = true;
 
                 if (persist) {
@@ -265,11 +274,11 @@ public class RouterKP extends ASIPPort {
     }
 
     public int getMessageCheckInterval() {
-        return mMessageCheckinterval;
+        return mMessageCheckInterval;
     }
 
     public void setMessageCheckInterval(int messageCheckInterval) {
-        mMessageCheckinterval = messageCheckInterval;
+        mMessageCheckInterval = messageCheckInterval;
         mPrefs.edit().putInt(KEY_MESSAGE_CHECK_INTERVAL, messageCheckInterval).apply();
     }
 
@@ -298,5 +307,14 @@ public class RouterKP extends ASIPPort {
     public void setMaxCopies(int maxCopies) {
         mMaxCopies = maxCopies;
         mPrefs.edit().putInt(KEY_MAX_COPIES, maxCopies).apply();
+    }
+
+    public int getMaxMessages() {
+        return mMaxMessages;
+    }
+
+    public void setMaxMessages(int maxMessages) {
+        mMaxMessages = maxMessages;
+        mPrefs.edit().putInt(KEY_MAX_MESSAGES, maxMessages).apply();
     }
 }

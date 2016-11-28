@@ -182,6 +182,24 @@ public class RoutingServiceController implements ServiceConnection {
         }
     }
 
+    public int getMaxMessages() throws RoutingServiceNotRunningException {
+        if (mRoutingService != null) {
+            return mRoutingService.getMaxMessages();
+        }
+        else {
+            throw new RoutingServiceNotRunningException("Either the routing service isn't running or it isn't bound!");
+        }
+    }
+
+    public void setMaxMessages(int maxMessages) throws RoutingServiceNotRunningException {
+        if (mRoutingService != null) {
+            mRoutingService.setMaxMessages(maxMessages);
+        }
+        else {
+            throw new RoutingServiceNotRunningException("Either the routing service isn't running or it isn't bound!");
+        }
+    }
+
     private boolean isRoutingServiceRunning() {
         ActivityManager manager = (ActivityManager) mContext.getSystemService(Context.ACTIVITY_SERVICE);
         for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
