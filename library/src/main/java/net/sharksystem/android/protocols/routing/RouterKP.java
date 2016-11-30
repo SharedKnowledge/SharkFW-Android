@@ -3,7 +3,6 @@ package net.sharksystem.android.protocols.routing;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Handler;
-import android.util.JsonReader;
 import android.util.Log;
 
 import net.sharkfw.asip.engine.ASIPConnection;
@@ -12,6 +11,7 @@ import net.sharkfw.asip.engine.ASIPOutMessage;
 import net.sharkfw.asip.engine.ASIPSerializer;
 import net.sharkfw.knowledgeBase.PeerSemanticTag;
 import net.sharkfw.knowledgeBase.STSet;
+import net.sharkfw.knowledgeBase.SemanticTag;
 import net.sharkfw.knowledgeBase.SharkCSAlgebra;
 import net.sharkfw.knowledgeBase.SharkKBException;
 import net.sharkfw.knowledgeBase.inmemory.InMemoSharkKB;
@@ -41,6 +41,7 @@ public class RouterKP extends ASIPPort {
     private static final String KEY_MESSAGE_TTL_UNIT = KEY_SHARK + ".messageTtlUnit";
     private static final String KEY_MESSAGE_CHECK_INTERVAL = KEY_SHARK + ".messageCheckInterval";
     private static final String KEY_MAX_MESSAGES = KEY_SHARK + ".maxMessages";
+    private static final SemanticTag TYPE_ROUTING_RESPONSE = InMemoSharkKB.createInMemoSemanticTag("TYPE_SUCCESSFUL_ROUTING_RESPONSE", "www.sharksystem.net/types/routing_response");
 
     //-----------------------------------------------------------------------------
     //------------------------------- Objects -------------------------------------
@@ -122,53 +123,67 @@ public class RouterKP extends ASIPPort {
     public boolean handleMessage(ASIPInMessage message, ASIPConnection connection) {
 //        super.doProcess(msg, con);
 
-        boolean persist = false;
+        MessageDTO messageDTO = new MessageDTO(message);
+
+        if (isRoutingResponse(messageDTO)) {
+            this.checkSentMessageCopies(messageDTO);
+        } else {
+            this.handleRouting(message, messageDTO);
+        }
+
+        return true;
+    }
+
+    private void handleRouting(ASIPInMessage message, MessageDTO messageDTO) {
         boolean topicOk = false;
         boolean messageAlreadyStored = false;
 
-        MessageDTO messageDTO = new MessageDTO(message);
+        boolean messageLimitReached = mMessageContentProvider.getMessageCount() > mMaxMessages;
 
-        try {
-            boolean messageLimitReached = mMessageContentProvider.getMessageCount() > mMaxMessages;
-
-            if (!messageLimitReached) {
-                if (messageDTO.getTopic().isAny() && mRouteAnyTopics) {
-                    topicOk = true;
-                } else if (mTopicsToRoute.isEmpty() || SharkCSAlgebra.isIn(mTopicsToRoute, messageDTO.getTopic())) {
-                    topicOk = true;
+        if (!messageLimitReached) {
+            if (messageDTO.getTopic().isAny() && mRouteAnyTopics) {
+                topicOk = true;
+            } else {
+                try {
+                    if (mTopicsToRoute.isEmpty() || SharkCSAlgebra.isIn(mTopicsToRoute, messageDTO.getTopic())) {
+                        topicOk = true;
+                    }
+                } catch (SharkKBException e) {
+                    e.printStackTrace();
                 }
             }
-
-            if (!messageLimitReached && topicOk) {
-                messageAlreadyStored = mMessageContentProvider.doesMessageAlreadyExist(messageDTO);
-            }
-
-            // TODO Spatial Routing, Peer Routing etc.
-            if (!messageLimitReached && topicOk && !messageAlreadyStored) {
-                persist = true;
-
-                if (persist) {
-                    //this.sendResponse(message, connection);
-                    mMessageContentProvider.persist(messageDTO);
-                }
-            }
-        } catch (SharkKBException e) {
-            e.printStackTrace();
         }
 
-        return persist;
+        if (!messageLimitReached && topicOk) {
+            messageAlreadyStored = mMessageContentProvider.doesMessageAlreadyExist(messageDTO);
+        }
+
+        // TODO Spatial Routing, Peer Routing etc.
+        if (!messageLimitReached && topicOk && !messageAlreadyStored) {
+            this.sendResponse(message, messageDTO.getMd5Hash());
+            mMessageContentProvider.persist(messageDTO);
+        }
     }
 
-    // TODO how to return a short response that says that this certain, UNIQUE ASIPInMessage gets further routed by this RouterKP?
-    // TODO implement method that waits for that response
-    private void sendResponse(final ASIPInMessage message, final ASIPConnection connection) {
+    // TODO
+    private void checkSentMessageCopies(MessageDTO messageDTO) {
+
+    }
+
+    private boolean isRoutingResponse(MessageDTO message) {
+        return message.getType() != null && SharkCSAlgebra.identical(TYPE_ROUTING_RESPONSE, message.getType());
+    }
+
+    // TODO create response message that only contains PHYSICAL address to send to, type and md5 hash
+    private void sendResponse(final ASIPInMessage message, final String md5Hash) {
         new Thread(new Runnable() {
             @Override
             public void run() {
                 ASIPOutMessage response = null;
                 try {
                     response = message.createResponse(null);
-                    response.raw(ROUTING_MESSAGE_ACCEPTED_STRING.getBytes());
+                    response.setType(TYPE_ROUTING_RESPONSE);
+                    response.raw(md5Hash.getBytes());
                 } catch (SharkKBException e) {
                     e.printStackTrace();
                 }
@@ -177,10 +192,8 @@ public class RouterKP extends ASIPPort {
         }).start();
     }
 
-    // TODO Spatial Routing, Peer Routing etc.
     private void checkMessagesToRoute() {
         Log.e("ROUTERKP", "Checking messages");
-        // TODO cache messages
         List<MessageDTO> allMessages = mMessageContentProvider.getAllMessages();
 
         if (allMessages.size() > 0) {

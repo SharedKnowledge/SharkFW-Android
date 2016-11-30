@@ -196,7 +196,7 @@ public class MessageContentProvider {
         return result;
     }
 
-    private MessageDTO findMessageByMD5Hash(String md5Hash) {
+    public MessageDTO findMessageByMD5Hash(String md5Hash) {
         SQLiteDatabase database = dbHelper.getReadableDatabase();
         String whereClause = MySQLiteHelper.COLUMN_MD5HASH + "=?" + md5Hash;
         Cursor cursor = database.query(MySQLiteHelper.TABLE_MESSAGES, allMessagesColumns, whereClause, null, null, null, null);
