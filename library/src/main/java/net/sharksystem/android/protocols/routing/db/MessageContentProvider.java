@@ -14,12 +14,14 @@ import net.sharksystem.android.protocols.routing.Utils;
 import org.json.JSONException;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class MessageContentProvider {
 
     private MySQLiteHelper dbHelper;
-    private String[] allMessagesColumns = { MySQLiteHelper.COLUMN_ID,
+    private String[] allMessagesColumns = {
+            MySQLiteHelper.COLUMN_ID,
             MySQLiteHelper.COLUMN_VERSION,
             MySQLiteHelper.COLUMN_FORMAT,
             MySQLiteHelper.COLUMN_ENCRYPTED,
@@ -37,9 +39,11 @@ public class MessageContentProvider {
             MySQLiteHelper.COLUMN_RECEIVERLOCATION,
             MySQLiteHelper.COLUMN_RECEIVERTIME,
             MySQLiteHelper.COLUMN_CONTENT,
-            MySQLiteHelper.COLUMN_INSERTION_DATE};
+            MySQLiteHelper.COLUMN_INSERTION_DATE,
+            MySQLiteHelper.COLUMN_MD5HASH};
 
-    private String[] allReceiversColumns = { MySQLiteHelper.COLUMN_ID,
+    private String[] allReceiversColumns = {
+            MySQLiteHelper.COLUMN_ID,
             MySQLiteHelper.COLUMN_MESSAGE_ID,
             MySQLiteHelper.COLUMN_PEER_ADDRESS};
 
@@ -47,22 +51,53 @@ public class MessageContentProvider {
         dbHelper = MySQLiteHelper.getInstance(context);
     }
 
+    // TODO Receivers, Signature
+    private MessageDTO cursorToMessage(Cursor cursor) {
+        MessageDTO messageDTO = new MessageDTO();
+        try {
+            messageDTO.setId(cursor.getLong(0));
+            messageDTO.setVersion(cursor.getString(1));
+            messageDTO.setFormat(cursor.getString(2));
+            messageDTO.setEncrypted(cursor.getInt(3) > 0);
+            messageDTO.setEncryptedSessionKey(cursor.getString(4));
+            messageDTO.setSigned(cursor.getInt(5) > 0);
+            messageDTO.setTtl(cursor.getLong(6));
+            messageDTO.setSentCopies(cursor.getLong(7));
+            messageDTO.setCommand(cursor.getInt(8));
+            messageDTO.setTopic(ASIPSerializer.deserializeTag(cursor.getString(9)));
+            messageDTO.setType(ASIPSerializer.deserializeTag(cursor.getString(10)));
+            messageDTO.setSender(ASIPSerializer.deserializePeerTag(cursor.getString(11)));
+            //messageDTO.setReceivers(ASIPSerializer.deserializeSTSet(cursor.getString(12)));
+            //messageDTO.setSignature(cursor.getString(13));
+            messageDTO.setReceiverPeer(ASIPSerializer.deserializePeerTag(cursor.getString(13)));
+            messageDTO.setReceiverSpatial(ASIPSerializer.deserializeSpatialTag(cursor.getString(14)));
+            messageDTO.setReceiverTime(ASIPSerializer.deserializeTimeTag(cursor.getString(15)));
+            messageDTO.setContent(cursor.getString(16));
+            messageDTO.setInsertionDate(cursor.getLong(17));
+            messageDTO.setMd5Hash(cursor.getString(18));
+        } catch (SharkKBException e) {
+            e.printStackTrace();
+        }
+
+        return messageDTO;
+    }
+
+
     //TODO Signature
-    public void persist(ASIPInMessage msg) {
+    public void persist(MessageDTO msg) {
         SQLiteDatabase database = dbHelper.getWritableDatabase();
 
         ContentValues values = new ContentValues();
-        values.put(MySQLiteHelper.COLUMN_VERSION, msg.getVersion());
-        values.put(MySQLiteHelper.COLUMN_FORMAT, msg.getFormat());
-        values.put(MySQLiteHelper.COLUMN_ENCRYPTED, msg.isEncrypted());
-        values.put(MySQLiteHelper.COLUMN_ENCRYPTED_SESSION_KEY, msg.getEncryptedSessionKey());
-        values.put(MySQLiteHelper.COLUMN_SIGNED, msg.isSigned());
-        //values.put(MySQLiteHelper.SIGNATURE, msg.getSignature());
-        values.put(MySQLiteHelper.COLUMN_TTL, msg.getTtl());
-        values.put(MySQLiteHelper.COLUMN_COPIES, 0);
-        values.put(MySQLiteHelper.COLUMN_COMMAND, msg.getCommand());
-        values.put(MySQLiteHelper.COLUMN_INSERTION_DATE, System.currentTimeMillis());
         try {
+            values.put(MySQLiteHelper.COLUMN_VERSION, msg.getVersion());
+            values.put(MySQLiteHelper.COLUMN_FORMAT, msg.getFormat());
+            values.put(MySQLiteHelper.COLUMN_ENCRYPTED, msg.isEncrypted());
+            values.put(MySQLiteHelper.COLUMN_ENCRYPTED_SESSION_KEY, msg.getEncryptedSessionKey());
+            values.put(MySQLiteHelper.COLUMN_SIGNED, msg.isSigned());
+            //values.put(MySQLiteHelper.SIGNATURE, msg.getSignature());
+            values.put(MySQLiteHelper.COLUMN_TTL, msg.getTtl());
+            values.put(MySQLiteHelper.COLUMN_COPIES, 0);
+            values.put(MySQLiteHelper.COLUMN_COMMAND, msg.getCommand());
             values.put(MySQLiteHelper.COLUMN_TOPIC, msg.getTopic() != null ? ASIPSerializer.serializeTag(msg.getTopic()).toString() : "");
             values.put(MySQLiteHelper.COLUMN_TYPE, msg.getType() != null ? ASIPSerializer.serializeTag(msg.getType()).toString() : "");
             values.put(MySQLiteHelper.COLUMN_SENDER, msg.getSender() != null ? ASIPSerializer.serializeTag(msg.getSender()).toString() : "");
@@ -70,7 +105,9 @@ public class MessageContentProvider {
             values.put(MySQLiteHelper.COLUMN_RECEIVERPEER, msg.getReceiverPeer() != null ? ASIPSerializer.serializeTag(msg.getReceiverPeer()).toString() : "");
             values.put(MySQLiteHelper.COLUMN_RECEIVERLOCATION, msg.getReceiverSpatial() != null ? ASIPSerializer.serializeTag(msg.getReceiverSpatial()).toString() : "");
             values.put(MySQLiteHelper.COLUMN_RECEIVERTIME, msg.getReceiverTime() != null ? ASIPSerializer.serializeTag(msg.getReceiverTime()).toString() : "");
-            values.put(MySQLiteHelper.COLUMN_CONTENT, Utils.getContent(msg));
+            values.put(MySQLiteHelper.COLUMN_CONTENT, msg.getContent());
+            values.put(MySQLiteHelper.COLUMN_INSERTION_DATE, System.currentTimeMillis());
+            values.put(MySQLiteHelper.COLUMN_MD5HASH, msg.getMd5Hash());
         } catch (JSONException | SharkKBException e) {
             e.printStackTrace();
         }
@@ -80,22 +117,21 @@ public class MessageContentProvider {
         dbHelper.close();
     }
 
-
     //TODO Signature
     public void update(MessageDTO msg) {
         SQLiteDatabase database = dbHelper.getWritableDatabase();
 
         ContentValues values = new ContentValues();
-        values.put(MySQLiteHelper.COLUMN_VERSION, msg.getVersion());
-        values.put(MySQLiteHelper.COLUMN_FORMAT, msg.getFormat());
-        values.put(MySQLiteHelper.COLUMN_ENCRYPTED, msg.isEncrypted());
-        values.put(MySQLiteHelper.COLUMN_ENCRYPTED_SESSION_KEY, msg.getEncryptedSessionKey());
-        values.put(MySQLiteHelper.COLUMN_SIGNED, msg.isSigned());
-        //values.put(MySQLiteHelper.SIGNATURE, msg.getSignature());
-        values.put(MySQLiteHelper.COLUMN_TTL, msg.getTtl());
-        values.put(MySQLiteHelper.COLUMN_COPIES, msg.getSentCopies());
-        values.put(MySQLiteHelper.COLUMN_COMMAND, msg.getCommand());
         try {
+            values.put(MySQLiteHelper.COLUMN_VERSION, msg.getVersion());
+            values.put(MySQLiteHelper.COLUMN_FORMAT, msg.getFormat());
+            values.put(MySQLiteHelper.COLUMN_ENCRYPTED, msg.isEncrypted());
+            values.put(MySQLiteHelper.COLUMN_ENCRYPTED_SESSION_KEY, msg.getEncryptedSessionKey());
+            values.put(MySQLiteHelper.COLUMN_SIGNED, msg.isSigned());
+            //values.put(MySQLiteHelper.SIGNATURE, msg.getSignature());
+            values.put(MySQLiteHelper.COLUMN_TTL, msg.getTtl());
+            values.put(MySQLiteHelper.COLUMN_COPIES, msg.getSentCopies());
+            values.put(MySQLiteHelper.COLUMN_COMMAND, msg.getCommand());
             values.put(MySQLiteHelper.COLUMN_TOPIC, msg.getTopic() != null ? ASIPSerializer.serializeTag(msg.getTopic()).toString() : "");
             values.put(MySQLiteHelper.COLUMN_TYPE, msg.getType() != null ? ASIPSerializer.serializeTag(msg.getType()).toString() : "");
             values.put(MySQLiteHelper.COLUMN_SENDER, msg.getSender() != null ? ASIPSerializer.serializeTag(msg.getSender()).toString() : "");
@@ -104,6 +140,7 @@ public class MessageContentProvider {
             values.put(MySQLiteHelper.COLUMN_RECEIVERLOCATION, msg.getReceiverSpatial() != null ? ASIPSerializer.serializeTag(msg.getReceiverSpatial()).toString() : "");
             values.put(MySQLiteHelper.COLUMN_RECEIVERTIME, msg.getReceiverTime() != null ? ASIPSerializer.serializeTag(msg.getReceiverTime()).toString() : "");
             values.put(MySQLiteHelper.COLUMN_CONTENT, msg.getContent());
+            values.put(MySQLiteHelper.COLUMN_MD5HASH, msg.getMd5Hash());
         } catch (JSONException | SharkKBException e) {
             e.printStackTrace();
         }
@@ -140,46 +177,41 @@ public class MessageContentProvider {
         return messageDTOs;
     }
 
-    public boolean doesMessageAlreadyExist(ASIPInMessage message) {
-        List<MessageDTO> allMessages = this.getAllMessages();
+    public long getMessageCount() {
+        SQLiteDatabase database = dbHelper.getReadableDatabase();
+        long count = DatabaseUtils.queryNumEntries(database, MySQLiteHelper.TABLE_MESSAGES);
+        dbHelper.close();
 
-        for (MessageDTO persistedMessage : allMessages) {
-            if (persistedMessage.contentEquals(message)) {
-                return true;
-            }
-        }
-
-        return false;
+        return count;
     }
 
-    // TODO Receivers, Signature
-    private MessageDTO cursorToMessage(Cursor cursor) {
-        MessageDTO messageDTO = new MessageDTO();
-        messageDTO.setId(cursor.getLong(0));
-        messageDTO.setVersion(cursor.getString(1));
-        messageDTO.setFormat(cursor.getString(2));
-        messageDTO.setEncrypted(cursor.getInt(3) > 0);
-        messageDTO.setEncryptedSessionKey(cursor.getString(4));
-        messageDTO.setSigned(cursor.getInt(5) > 0);
-        messageDTO.setTtl(cursor.getLong(6));
-        messageDTO.setSentCopies(cursor.getLong(7));
-        messageDTO.setCommand(cursor.getInt(8));
-        try {
-            messageDTO.setTopic(ASIPSerializer.deserializeTag(cursor.getString(9)));
-            messageDTO.setType(ASIPSerializer.deserializeTag(cursor.getString(10)));
-            messageDTO.setSender(ASIPSerializer.deserializePeerTag(cursor.getString(11)));
-            //messageDTO.setReceivers(ASIPSerializer.deserializeSTSet(cursor.getString(12)));
-            //messageDTO.setSignature(cursor.getString(13));
-            messageDTO.setReceiverPeer(ASIPSerializer.deserializePeerTag(cursor.getString(13)));
-            messageDTO.setReceiverSpatial(ASIPSerializer.deserializeSpatialTag(cursor.getString(14)));
-            messageDTO.setReceiverTime(ASIPSerializer.deserializeTimeTag(cursor.getString(15)));
-            messageDTO.setContent(cursor.getString(16));
-            messageDTO.setInsertionDate(cursor.getLong(17));
-        } catch (SharkKBException e) {
-            e.printStackTrace();
+    public boolean doesMessageAlreadyExist(MessageDTO message) {
+        SQLiteDatabase database = dbHelper.getReadableDatabase();
+        String whereClause = MySQLiteHelper.COLUMN_MD5HASH + "=?";
+        Cursor cursor = database.query(MySQLiteHelper.TABLE_MESSAGES, allMessagesColumns, whereClause, new String[] { message.getMd5Hash() }, null, null, null);
+
+        boolean result = cursor.getCount() == 1;
+        cursor.close();
+
+        return result;
+    }
+
+    private MessageDTO findMessageByMD5Hash(String md5Hash) {
+        SQLiteDatabase database = dbHelper.getReadableDatabase();
+        String whereClause = MySQLiteHelper.COLUMN_MD5HASH + "=?" + md5Hash;
+        Cursor cursor = database.query(MySQLiteHelper.TABLE_MESSAGES, allMessagesColumns, whereClause, null, null, null, null);
+
+        MessageDTO result = null;
+
+        if (cursor.getCount() == 1) {
+            cursor.moveToFirst();
+            result = this.cursorToMessage(cursor);
         }
 
-        return messageDTO;
+        cursor.close();
+        dbHelper.close();
+
+        return result;
     }
 
     public List<String> getReceiverAddresses(MessageDTO message) {
@@ -197,6 +229,7 @@ public class MessageContentProvider {
         return receiverAddresses;
     }
 
+
     public void updateReceiverAddresses(MessageDTO message, List<String> addressesToSend) {
         SQLiteDatabase database = dbHelper.getWritableDatabase();
 
@@ -207,14 +240,5 @@ public class MessageContentProvider {
             database.insert(MySQLiteHelper.TABLE_SENT_MESSAGES, null, values);
         }
         dbHelper.close();
-    }
-
-
-    public long getMessageCount() {
-        SQLiteDatabase database = dbHelper.getReadableDatabase();
-        long count = DatabaseUtils.queryNumEntries(database, MySQLiteHelper.TABLE_MESSAGES);
-        dbHelper.close();
-
-        return count;
     }
 }

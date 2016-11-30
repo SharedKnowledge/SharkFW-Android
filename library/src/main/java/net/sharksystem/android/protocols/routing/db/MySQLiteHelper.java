@@ -34,6 +34,7 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
     public static final String COLUMN_RECEIVERLOCATION = "receiver_location";
     public static final String COLUMN_RECEIVERTIME = "receiver_time";
     public static final String COLUMN_CONTENT = "content";
+    public static final String COLUMN_MD5HASH = "md5_hash";
 
     public static final String TABLE_SENT_MESSAGES = "sent_messages";
     public static final String COLUMN_MESSAGE_ID = "message_id";
@@ -72,7 +73,8 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
             + COLUMN_RECEIVERLOCATION + " text, "
             + COLUMN_RECEIVERTIME +  " text, "
             + COLUMN_CONTENT + " text, "
-            + COLUMN_INSERTION_DATE + " signed bigint);";
+            + COLUMN_INSERTION_DATE + " signed bigint, "
+            + COLUMN_MD5HASH + " text);";
 
     private static final String DATABASE_CREATE_SENT_MESSAGES =
             "create table "

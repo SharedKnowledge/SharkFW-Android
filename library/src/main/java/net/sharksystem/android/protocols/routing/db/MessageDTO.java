@@ -28,6 +28,29 @@ public class MessageDTO {
     private TimeSemanticTag receiverTime;
     private String content;
     private long insertionDate;
+    private String md5Hash;
+
+    public MessageDTO() {}
+
+    public MessageDTO(ASIPInMessage message) {
+        this.version = message.getVersion();
+        this.format = message.getFormat();
+        this.encrypted = message.isEncrypted();
+        this.encryptedSessionKey = message.getEncryptedSessionKey();
+        this.signed = message.isSigned();
+        this.signature = message.getSignature();
+        this.ttl = message.getTtl();
+        this.command = message.getCommand();
+        this.topic = message.getTopic();
+        this.type = message.getType();
+        this.sender = message.getSender();
+        this.receivers = message.getReceivers();
+        this.receiverPeer = message.getReceiverPeer();
+        this.receiverSpatial = message.getReceiverSpatial();
+        this.receiverTime = message.getReceiverTime();
+        this.content = Utils.getContent(message);
+        this.md5Hash = Utils.generateMd5Hash(message);
+    }
 
     public long getId() {
         return id;
@@ -179,6 +202,14 @@ public class MessageDTO {
 
     public void setInsertionDate(long insertionDate) {
         this.insertionDate = insertionDate;
+    }
+
+    public String getMd5Hash() {
+        return this.md5Hash;
+    }
+
+    public void setMd5Hash(String md5Hash) {
+        this.md5Hash = md5Hash;
     }
 
     // TODO Receivers

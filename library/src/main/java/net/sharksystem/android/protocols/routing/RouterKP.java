@@ -3,6 +3,7 @@ package net.sharksystem.android.protocols.routing;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Handler;
+import android.util.JsonReader;
 import android.util.Log;
 
 import net.sharkfw.asip.engine.ASIPConnection;
@@ -121,29 +122,25 @@ public class RouterKP extends ASIPPort {
     public boolean handleMessage(ASIPInMessage message, ASIPConnection connection) {
 //        super.doProcess(msg, con);
 
-        if (!mMessageContentProvider.doesMessageAlreadyExist(message)) {
-            Log.e("ROUTERKP", "Persisting new message");
-            mMessageContentProvider.persist(message);
-        }
-
-        boolean messageLimitReached = true;
         boolean persist = false;
         boolean topicOk = false;
         boolean messageAlreadyStored = false;
 
+        MessageDTO messageDTO = new MessageDTO(message);
+
         try {
-            messageLimitReached = mMessageContentProvider.getMessageCount() > mMaxMessages;
+            boolean messageLimitReached = mMessageContentProvider.getMessageCount() > mMaxMessages;
 
             if (!messageLimitReached) {
-                if (message.getTopic().isAny() && mRouteAnyTopics) {
+                if (messageDTO.getTopic().isAny() && mRouteAnyTopics) {
                     topicOk = true;
-                } else if (mTopicsToRoute.isEmpty() || SharkCSAlgebra.isIn(mTopicsToRoute, message.getTopic())) {
+                } else if (mTopicsToRoute.isEmpty() || SharkCSAlgebra.isIn(mTopicsToRoute, messageDTO.getTopic())) {
                     topicOk = true;
                 }
             }
 
             if (!messageLimitReached && topicOk) {
-                messageAlreadyStored = mMessageContentProvider.doesMessageAlreadyExist(message);
+                messageAlreadyStored = mMessageContentProvider.doesMessageAlreadyExist(messageDTO);
             }
 
             // TODO Spatial Routing, Peer Routing etc.
@@ -151,8 +148,8 @@ public class RouterKP extends ASIPPort {
                 persist = true;
 
                 if (persist) {
-                    this.sendResponse(message, connection);
-                    mMessageContentProvider.persist(message);
+                    //this.sendResponse(message, connection);
+                    mMessageContentProvider.persist(messageDTO);
                 }
             }
         } catch (SharkKBException e) {

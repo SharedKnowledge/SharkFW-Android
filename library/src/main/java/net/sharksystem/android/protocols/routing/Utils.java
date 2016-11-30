@@ -1,6 +1,7 @@
 package net.sharksystem.android.protocols.routing;
 
 import android.content.Context;
+import android.util.JsonReader;
 
 import com.vividsolutions.jts.algorithm.ConvexHull;
 import com.vividsolutions.jts.geom.Coordinate;
@@ -15,11 +16,14 @@ import net.sharksystem.android.protocols.routing.db.CoordinateContentProvider;
 import net.sharksystem.android.protocols.routing.db.CoordinateDTO;
 
 import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.List;
 
 public class Utils {
@@ -69,5 +73,32 @@ public class Utils {
         }
 
         return builder.toString();
+    }
+
+    // TODO re-add receivers
+    public static String generateMd5Hash(ASIPInMessage msg) {
+        try {
+            JSONObject jsonObject = new JSONObject(msg.getParsedString());
+            jsonObject.remove("TTL");
+            jsonObject.remove("RECEIVERS");
+
+            byte[] messageBytes = jsonObject.toString().getBytes(StandardCharsets.UTF_8);
+
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            md.update(messageBytes);
+
+            byte[] hashBytes = md.digest();
+
+            StringBuilder sb = new StringBuilder();
+            for (byte b : hashBytes) {
+                sb.append(String.format("%02x", b & 0xff));
+            }
+
+            return sb.toString();
+        } catch (JSONException | NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        }
+
+        return null;
     }
 }
