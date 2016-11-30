@@ -41,7 +41,7 @@ public class RouterKP extends ASIPPort {
     private static final String KEY_MESSAGE_TTL_UNIT = KEY_SHARK + ".messageTtlUnit";
     private static final String KEY_MESSAGE_CHECK_INTERVAL = KEY_SHARK + ".messageCheckInterval";
     private static final String KEY_MAX_MESSAGES = KEY_SHARK + ".maxMessages";
-    private static final SemanticTag TYPE_ROUTING_RESPONSE = InMemoSharkKB.createInMemoSemanticTag("TYPE_SUCCESSFUL_ROUTING_RESPONSE", "www.sharksystem.net/types/routing_response");
+    private static final SemanticTag TYPE_ROUTING_RESPONSE = InMemoSharkKB.createInMemoSemanticTag("TYPE_ROUTING_RESPONSE", "www.sharksystem.net/types/routing_response");
 
     //-----------------------------------------------------------------------------
     //------------------------------- Objects -------------------------------------
@@ -134,6 +134,20 @@ public class RouterKP extends ASIPPort {
         return true;
     }
 
+    private boolean isRoutingResponse(MessageDTO message) {
+        return message.getType() != null && SharkCSAlgebra.identical(TYPE_ROUTING_RESPONSE, message.getType());
+    }
+
+    private void checkSentMessageCopies(MessageDTO messageDTO) {
+        int sentCopies = messageDTO.getSentCopies();
+        if (sentCopies + 1 < mMaxCopies) {
+            messageDTO.setSentCopies(sentCopies + 1);
+            mMessageContentProvider.update(messageDTO);
+        } else {
+            mMessageContentProvider.delete(messageDTO);
+        }
+    }
+
     private void handleRouting(ASIPInMessage message, MessageDTO messageDTO) {
         boolean topicOk = false;
         boolean messageAlreadyStored = false;
@@ -165,29 +179,19 @@ public class RouterKP extends ASIPPort {
         }
     }
 
-    // TODO
-    private void checkSentMessageCopies(MessageDTO messageDTO) {
-
-    }
-
-    private boolean isRoutingResponse(MessageDTO message) {
-        return message.getType() != null && SharkCSAlgebra.identical(TYPE_ROUTING_RESPONSE, message.getType());
-    }
 
     // TODO create response message that only contains PHYSICAL address to send to, type and md5 hash
     private void sendResponse(final ASIPInMessage message, final String md5Hash) {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                ASIPOutMessage response = null;
                 try {
-                    response = message.createResponse(null);
+                    ASIPOutMessage response = message.createResponse(null);
                     response.setType(TYPE_ROUTING_RESPONSE);
                     response.raw(md5Hash.getBytes());
                 } catch (SharkKBException e) {
                     e.printStackTrace();
                 }
-//                ASIPOutMessage response = mEngine.createASIPOutMessage(message.getSender().getAddresses(), message.getSender());
             }
         }).start();
     }
@@ -229,11 +233,11 @@ public class RouterKP extends ASIPPort {
 
     private void broadcastMessage(MessageDTO message) {
         String[] nearbyPeerTCPAddresses = mEngine.getNearbyPeerTCPAddresses();
-        List<String> previousReceiverAdresses = mMessageContentProvider.getReceiverAddresses(message);
+        List<String> previousReceiverAddresses = mMessageContentProvider.getReceiverAddresses(message);
         List<String> addressesToSend = new ArrayList<>();
 
         for (String address : nearbyPeerTCPAddresses) {
-            if (!previousReceiverAdresses.contains(address)) {
+            if (!previousReceiverAddresses.contains(address)) {
                 addressesToSend.add(address);
             }
         }
@@ -242,17 +246,7 @@ public class RouterKP extends ASIPPort {
             // TODO Replace ROUTERKP with standard tags
             Log.e("ROUTERKP", "Broadcasting message to " + addressesToSend.size() + " addresses.");
             mEngine.sendMessage(message, addressesToSend.toArray(new String[addressesToSend.size()]));
-
-            // TODO update sentCopies only after routing response
-            long sentCopies = message.getSentCopies() + addressesToSend.size();
-            if (sentCopies > mMaxCopies) {
-                Log.e("ROUTERKP", "Deleting message because max copies number exceeded");
-                mMessageContentProvider.delete(message);
-            } else {
-                message.setSentCopies(sentCopies);
-                mMessageContentProvider.updateReceiverAddresses(message, addressesToSend);
-                mMessageContentProvider.update(message);
-            }
+            mMessageContentProvider.updateReceiverAddresses(message, addressesToSend);
         }
     }
 

@@ -62,7 +62,7 @@ public class MessageContentProvider {
             messageDTO.setEncryptedSessionKey(cursor.getString(4));
             messageDTO.setSigned(cursor.getInt(5) > 0);
             messageDTO.setTtl(cursor.getLong(6));
-            messageDTO.setSentCopies(cursor.getLong(7));
+            messageDTO.setSentCopies(cursor.getInt(7));
             messageDTO.setCommand(cursor.getInt(8));
             messageDTO.setTopic(ASIPSerializer.deserializeTag(cursor.getString(9)));
             messageDTO.setType(ASIPSerializer.deserializeTag(cursor.getString(10)));

@@ -17,7 +17,7 @@ public class MessageDTO {
     private boolean signed;
     private String signature;
     private long ttl;
-    private long sentCopies;
+    private int sentCopies;
     private int command;
     private SemanticTag topic;
     private SemanticTag type;
@@ -116,11 +116,11 @@ public class MessageDTO {
         this.ttl = ttl;
     }
 
-    public long getSentCopies() {
+    public int getSentCopies() {
         return sentCopies;
     }
 
-    public void setSentCopies(long sentCopies) {
+    public void setSentCopies(int sentCopies) {
         this.sentCopies = sentCopies;
     }
 

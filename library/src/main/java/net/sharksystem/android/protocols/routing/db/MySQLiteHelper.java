@@ -62,7 +62,7 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
             + COLUMN_ENCRYPTED_SESSION_KEY + " text, "
             + COLUMN_SIGNED + " bool, "
             + COLUMN_TTL + " signed bigint, "
-            + COLUMN_COPIES + " signed bigint, "
+            + COLUMN_COPIES + " signed int, "
             + COLUMN_COMMAND + " integer, "
             + COLUMN_TOPIC + " text, "
             + COLUMN_TYPE + " text, "
