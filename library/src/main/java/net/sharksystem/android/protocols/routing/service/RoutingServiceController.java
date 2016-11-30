@@ -126,7 +126,7 @@ public class RoutingServiceController implements ServiceConnection {
 
     }
 
-    public long getMessageTtl() throws RoutingServiceNotRunningException {
+    public int getMessageTtl() throws RoutingServiceNotRunningException {
         if (mRoutingService != null) {
             return mRoutingService.getMessageTtl();
         }
@@ -135,7 +135,7 @@ public class RoutingServiceController implements ServiceConnection {
         }
     }
 
-    public void setMessageTtl(long messageTtl) throws RoutingServiceNotRunningException {
+    public void setMessageTtl(int messageTtl) throws RoutingServiceNotRunningException {
         if (mRoutingService != null) {
             mRoutingService.setMessageTtl(messageTtl);
         }

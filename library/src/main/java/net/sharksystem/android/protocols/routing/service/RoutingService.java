@@ -136,11 +136,11 @@ public class RoutingService extends Service {
         mRouterKP.setMaxCopies(maxCopies);
     }
 
-    public long getMessageTtl() {
+    public int getMessageTtl() {
         return mRouterKP.getMessageTtl();
     }
 
-    public void setMessageTtl(long messageTtl) {
+    public void setMessageTtl(int messageTtl) {
         mRouterKP.setMessageTtl(messageTtl);
     }
 

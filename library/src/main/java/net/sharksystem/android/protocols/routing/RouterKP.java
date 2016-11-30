@@ -52,14 +52,13 @@ public class RouterKP extends ASIPPort {
     private AndroidSharkEngine mEngine;
     private MessageContentProvider mMessageContentProvider;
 
-    // TODO datatypes int, long, unsigned int
     //-----------------------------------------------------------------------------
     //------------------------- Configuration Parameters --------------------------
     //-----------------------------------------------------------------------------
     private STSet mTopicsToRoute;
     private boolean mRouteAnyTopics;
     private int mMaxCopies;
-    private long mMessageTtl;
+    private int mMessageTtl;
     private TimeUnit mMessageTtlUnit;
     private int mMessageCheckInterval;
     private int mMaxMessages;
@@ -70,7 +69,7 @@ public class RouterKP extends ASIPPort {
     private static final STSet DEFAULT_TOPICS_TO_ROUTE = InMemoSharkKB.createInMemoSTSet();
     private static final boolean DEFAULT_ROUTE_ANY_TOPICS = false;
     private static final int DEFAULT_MAX_COPIES = 10;
-    private static final long DEFAULT_MESSAGE_TTL = 30;
+    private static final int DEFAULT_MESSAGE_TTL = 30;
     private static final TimeUnit DEFAULT_MESSAGE_TTL_UNIT = TimeUnit.SECONDS;
     private static final int MESSAGE_CHECK_INTERVAL = 2000;
     private static final int DEFAULT_MAX_MESSAGES = 50;
@@ -104,7 +103,7 @@ public class RouterKP extends ASIPPort {
         }
         mRouteAnyTopics = mPrefs.getBoolean(KEY_ROUTE_ANY_TOPICS, DEFAULT_ROUTE_ANY_TOPICS);
         mMaxCopies = mPrefs.getInt(KEY_MAX_COPIES, DEFAULT_MAX_COPIES);
-        mMessageTtl = mPrefs.getLong(KEY_MESSAGE_TTL, DEFAULT_MESSAGE_TTL);
+        mMessageTtl = mPrefs.getInt(KEY_MESSAGE_TTL, DEFAULT_MESSAGE_TTL);
         mMessageTtlUnit = TimeUnit.valueOf(mPrefs.getString(KEY_MESSAGE_TTL_UNIT, DEFAULT_MESSAGE_TTL_UNIT.toString()));
         mMaxMessages = mPrefs.getInt(KEY_MAX_MESSAGES, DEFAULT_MAX_MESSAGES);
     }
@@ -299,11 +298,11 @@ public class RouterKP extends ASIPPort {
         mPrefs.edit().putString(KEY_MESSAGE_TTL_UNIT, messageTtlUnit.toString()).apply();
     }
 
-    public long getMessageTtl() {
+    public int getMessageTtl() {
         return mMessageTtl;
     }
 
-    public void setMessageTtl(long messageTtl) {
+    public void setMessageTtl(int messageTtl) {
         mMessageTtl = messageTtl;
         mPrefs.edit().putLong(KEY_MESSAGE_TTL, messageTtl).apply();
     }
