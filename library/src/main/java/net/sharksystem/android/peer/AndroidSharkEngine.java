@@ -183,11 +183,6 @@ public class AndroidSharkEngine extends J2SEAndroidSharkEngine implements KPNoti
     }
 
     @Override
-    protected Stub createBluetoothStreamStub(SharkStub kepStub) throws SharkProtocolNotSupportedException {
-        throw new SharkProtocolNotSupportedException();
-    }
-
-    @Override
     public void startBluetooth() throws SharkProtocolNotSupportedException, IOException {
         throw new SharkProtocolNotSupportedException();
     }

@@ -86,8 +86,6 @@ public class MovingRouterLocationListener implements LocationListener {
                         // TODO real broadcast
                         Toast.makeText(_context, "Message broadcast because destination reached", Toast.LENGTH_SHORT).show();
                         _messageContentProvider.delete(message);
-                    } else {
-                        this.decreaseChecks(message);
                     }
                 } else if (geometry instanceof LineString) {
                     // TODO
@@ -98,30 +96,10 @@ public class MovingRouterLocationListener implements LocationListener {
                         Toast.makeText(_context, "Message broadcast because destination reached", Toast.LENGTH_SHORT).show();
                         _messageContentProvider.delete(message);
                     }
-                    else {
-                        this.decreaseChecks(message);
-                    }
                 }
             }
-        } catch (SharkKBException e) {
-            e.printStackTrace();
         } catch (ParseException e) {
             e.printStackTrace();
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void decreaseChecks(MessageDTO message) throws JSONException, SharkKBException {
-        long checks = message.getSentCopies();
-        if (checks > 1) {
-            checks--;
-            message.setSentCopies(checks);
-            _messageContentProvider.update(message);
-        } else {
-            // TODO real broadcast
-            Toast.makeText(_context, "Message broadcast because time expired", Toast.LENGTH_SHORT).show();
-            _messageContentProvider.delete(message);
         }
     }
 }

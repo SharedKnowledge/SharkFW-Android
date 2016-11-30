@@ -75,12 +75,10 @@ public class Utils {
         return builder.toString();
     }
 
-    // TODO re-add receivers
     public static String generateMd5Hash(ASIPInMessage msg) {
         try {
             JSONObject jsonObject = new JSONObject(msg.getParsedString());
             jsonObject.remove("TTL");
-            jsonObject.remove("RECEIVERS");
 
             byte[] messageBytes = jsonObject.toString().getBytes(StandardCharsets.UTF_8);
 
@@ -98,6 +96,6 @@ public class Utils {
         } catch (JSONException | NoSuchAlgorithmException e) {
             e.printStackTrace();
         }
-
+        return "";
     }
 }

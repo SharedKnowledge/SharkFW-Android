@@ -51,7 +51,7 @@ public class MessageContentProvider {
         dbHelper = MySQLiteHelper.getInstance(context);
     }
 
-    // TODO Receivers, Signature
+    // TODO Signature
     private MessageDTO cursorToMessage(Cursor cursor) {
         MessageDTO messageDTO = new MessageDTO();
         try {
@@ -67,7 +67,7 @@ public class MessageContentProvider {
             messageDTO.setTopic(ASIPSerializer.deserializeTag(cursor.getString(9)));
             messageDTO.setType(ASIPSerializer.deserializeTag(cursor.getString(10)));
             messageDTO.setSender(ASIPSerializer.deserializePeerTag(cursor.getString(11)));
-            //messageDTO.setReceivers(ASIPSerializer.deserializeSTSet(cursor.getString(12)));
+            messageDTO.setReceivers(ASIPSerializer.deserializeSTSet(cursor.getString(12)));
             //messageDTO.setSignature(cursor.getString(13));
             messageDTO.setReceiverPeer(ASIPSerializer.deserializePeerTag(cursor.getString(13)));
             messageDTO.setReceiverSpatial(ASIPSerializer.deserializeSpatialTag(cursor.getString(14)));
@@ -186,14 +186,7 @@ public class MessageContentProvider {
     }
 
     public boolean doesMessageAlreadyExist(MessageDTO message) {
-        SQLiteDatabase database = dbHelper.getReadableDatabase();
-        String whereClause = MySQLiteHelper.COLUMN_MD5HASH + "=?";
-        Cursor cursor = database.query(MySQLiteHelper.TABLE_MESSAGES, allMessagesColumns, whereClause, new String[] { message.getMd5Hash() }, null, null, null);
-
-        boolean result = cursor.getCount() == 1;
-        cursor.close();
-
-        return result;
+        return findMessageByMD5Hash(message.getMd5Hash()) != null;
     }
 
     public MessageDTO findMessageByMD5Hash(String md5Hash) {

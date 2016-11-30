@@ -211,31 +211,4 @@ public class MessageDTO {
     public void setMd5Hash(String md5Hash) {
         this.md5Hash = md5Hash;
     }
-
-    // TODO Receivers
-    public boolean contentEquals(ASIPInMessage other) {
-        if (this.sender == null && other.getSender() == null || this.sender != null && this.sender.identical(other.getSender()))
-            return true;
-
-        if (this.receiverPeer == null && other.getReceiverPeer() == null || this.receiverPeer != null && this.receiverPeer.identical(other.getReceiverPeer()))
-            return true;
-
-        if (this.receiverSpatial == null && other.getReceiverSpatial() == null || this.receiverSpatial != null && this.receiverSpatial.identical(other.getReceiverSpatial()))
-            return true;
-
-        if (this.receiverTime == null && other.getReceiverTime() == null || this.receiverTime != null && this.receiverTime.identical(other.getReceiverTime()))
-            return true;
-
-        if (this.topic == null && other.getTopic() == null || this.topic != null && this.topic.identical(other.getTopic()))
-            return true;
-
-        if (this.type == null && other.getType() == null || this.type != null && this.type.identical(other.getType()))
-            return true;
-
-        String otherContent = Utils.getContent(other);
-        if (this.content == null && otherContent == null || this.content != null && this.content.equals(otherContent))
-            return true;
-
-        return false;
-    }
 }

@@ -71,7 +71,7 @@ public class RouterKP extends ASIPPort {
     private static final int DEFAULT_MAX_COPIES = 10;
     private static final int DEFAULT_MESSAGE_TTL = 30;
     private static final TimeUnit DEFAULT_MESSAGE_TTL_UNIT = TimeUnit.SECONDS;
-    private static final int MESSAGE_CHECK_INTERVAL = 2000;
+    private static final int MESSAGE_CHECK_INTERVAL = 5000;
     private static final int DEFAULT_MAX_MESSAGES = 50;
 
     public RouterKP(AndroidSharkEngine engine, Context context) {
@@ -125,7 +125,10 @@ public class RouterKP extends ASIPPort {
         MessageDTO messageDTO = new MessageDTO(message);
 
         if (isRoutingResponse(messageDTO)) {
-            this.checkSentMessageCopies(messageDTO);
+            MessageDTO internalDTO = mMessageContentProvider.findMessageByMD5Hash(messageDTO.getMd5Hash());
+            if (internalDTO != null) {
+                this.checkSentMessageCopies(internalDTO);
+            }
         } else {
             this.handleRouting(message, messageDTO);
         }
@@ -151,7 +154,7 @@ public class RouterKP extends ASIPPort {
         boolean topicOk = false;
         boolean messageAlreadyStored = false;
 
-        boolean messageLimitReached = mMessageContentProvider.getMessageCount() > mMaxMessages;
+        boolean messageLimitReached = mMessageContentProvider.getMessageCount() >= mMaxMessages;
 
         if (!messageLimitReached) {
             if (messageDTO.getTopic().isAny() && mRouteAnyTopics) {
@@ -171,7 +174,6 @@ public class RouterKP extends ASIPPort {
             messageAlreadyStored = mMessageContentProvider.doesMessageAlreadyExist(messageDTO);
         }
 
-        // TODO Spatial Routing, Peer Routing etc.
         if (!messageLimitReached && topicOk && !messageAlreadyStored) {
             this.sendResponse(message, messageDTO.getMd5Hash());
             mMessageContentProvider.persist(messageDTO);
