@@ -19,9 +19,8 @@ import net.sharkfw.knowledgeBase.inmemory.InMemoSharkKB;
 import net.sharkfw.kp.KPNotifier;
 import net.sharkfw.peer.ASIPPort;
 import net.sharkfw.system.L;
-import net.sharksystem.android.protocols.routing.RouterKP;
-import net.sharksystem.android.ports.RawMessagePort;
 import net.sharksystem.android.ports.RadarKP;
+import net.sharksystem.android.ports.RawMessagePort;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -42,14 +41,12 @@ public class SharkService extends Service implements KPNotifier {
     }
 
     public static final String SHARK_KEY = "net.sharksystem.android";
-    public static final String IS_ROUTING_ENABLED_KEY = SHARK_KEY + ".isRoutingEnabled";
     public static final String IS_ENGINE_RUNNING_KEY = SHARK_KEY + ".isEngineRunning";
 
     private IBinder _binder = new LocalBinder();
     private boolean mIsEngingeStarted = false;
 
     private AndroidSharkEngine mEngine;
-    private RouterKP mRouterKP;
     private ArrayList<ASIPPort> mKnowledgePorts;
 
     private String mNameToOffer;
@@ -66,7 +63,6 @@ public class SharkService extends Service implements KPNotifier {
         mListeners = new ArrayList<>();
 
         mPrefs = getSharedPreferences(SHARK_KEY, Context.MODE_PRIVATE);
-        mRouterKP = new RouterKP(mEngine, this);
 
         Log.e("SERVICE", "Service created");
 
@@ -82,28 +78,9 @@ public class SharkService extends Service implements KPNotifier {
             if (mPrefs.getBoolean(IS_ENGINE_RUNNING_KEY, false)) {
                 startEngine();
             }
-            if (mPrefs.getBoolean(IS_ROUTING_ENABLED_KEY, false)) {
-                startRouting();
-            }
         }
 
         return START_STICKY;
-    }
-
-    public void startRouting() {
-        Log.e("ROUTING", "Routing started");
-
-        mRouterKP.startRouting();
-
-        mPrefs.edit().putBoolean(IS_ROUTING_ENABLED_KEY, true).apply();
-    }
-
-    public void stopRouting() {
-        Log.e("ROUTING", "Routing stopped");
-
-        mRouterKP.stopRouting();
-
-        mPrefs.edit().putBoolean(IS_ROUTING_ENABLED_KEY, false).apply();
     }
 
     public void startEngine() {
@@ -142,7 +119,6 @@ public class SharkService extends Service implements KPNotifier {
             mIsEngingeStarted = false;
 
             mPrefs.edit().putBoolean(IS_ENGINE_RUNNING_KEY, false).apply();
-
         }
     }
 

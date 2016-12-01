@@ -1,4 +1,4 @@
-package net.sharksystem.android.protocols.routing.db;
+package net.sharksystem.android.protocols.location;
 
 import android.content.ContentValues;
 import android.content.Context;
@@ -60,7 +60,7 @@ public class CoordinateContentProvider {
             coordinateDTOs.add(coordinateDTO);
             cursor.moveToNext();
         }
-        // make sure to close the cursor
+
         cursor.close();
         dbHelper.close();
         return coordinateDTOs;

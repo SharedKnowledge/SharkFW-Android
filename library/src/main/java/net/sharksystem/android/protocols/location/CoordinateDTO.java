@@ -1,4 +1,4 @@
-package net.sharksystem.android.protocols.routing.db;
+package net.sharksystem.android.protocols.location;
 
 import com.vividsolutions.jts.geom.Coordinate;
 

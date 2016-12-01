@@ -67,22 +67,6 @@ public class SharkServiceController implements ServiceConnection, KPListener {
         }
     }
 
-    public void startRouting() {
-        if (mSharkService != null) {
-            mSharkService.startRouting();
-        } else {
-            // ?
-        }
-    }
-
-    public void stopRouting() {
-        if (mSharkService != null) {
-            mSharkService.stopRouting();
-        } else {
-            // ?
-        }
-    }
-
     public void setOffer(String name, String interest){
         mName = name;
         mInterest = interest;
@@ -137,7 +121,6 @@ public class SharkServiceController implements ServiceConnection, KPListener {
         if(!mStringMessages.contains(message)){
             mStringMessages.add(message);
         }
-
     }
 
     public CopyOnWriteArrayList<WifiDirectPeer> getPeers(){

@@ -1,4 +1,4 @@
-package net.sharksystem.android.protocols.routing;
+package net.sharksystem.android.protocols.location;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -7,27 +7,23 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
-import android.util.Log;
 import android.widget.Toast;
 
-import com.vividsolutions.jts.algorithm.ConvexHull;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.GeometryFactory;
-
-import net.sharksystem.android.protocols.routing.db.CoordinateContentProvider;
-import net.sharksystem.android.protocols.routing.db.CoordinateDTO;
 
 import java.util.List;
 
 public class LocationReceiver extends BroadcastReceiver {
 
-    public static final int MIN_TIME_REQUEST = 5 * 1000;
-    private static Location mLastLocation;
-    private static String _provider = LocationManager.NETWORK_PROVIDER;
-    private static Context mContext;
+    public static final String ACTION_REFRESH_SCHEDULE_ALARM = "net.sharksystem.android.ACTION_REFRESH_SCHEDULE_ALARM";;
+    public static final String TAG_COORDINATE_TTL = "coordinateTTL";
+
     private static long mTimeToLive;
     private static LocationManager mLocationManager;
+    private static CoordinateContentProvider mContentProvider;
+    private static GeometryFactory mGeometryFactory;
 
     private static LocationListener _locationListener = new LocationListener() {
 
@@ -45,57 +41,52 @@ public class LocationReceiver extends BroadcastReceiver {
 
         @Override
         public void onLocationChanged(Location location) {
-            mLastLocation = location;
-            updateMovementProfile(location);
+            handleLocation(location);
         }
     };
 
     // received request from the calling service
     @Override
     public void onReceive(final Context context, Intent intent) {
-        Log.e("LOCATION", "onReceive");
-        mContext = context;
-        mTimeToLive = intent.getLongExtra(RouterKP.TAG_COORDINATE_TTL, RouterKP.DEFAULT_COORDINATE_TTL);
+        if (mContentProvider == null) {
+            mContentProvider = new CoordinateContentProvider(context);
+        }
+        if (mGeometryFactory == null) {
+            mGeometryFactory = new GeometryFactory();
+        }
+
+        String provider = LocationManager.NETWORK_PROVIDER;
+        mTimeToLive = intent.getLongExtra(TAG_COORDINATE_TTL, LocationService.DEFAULT_COORDINATE_TTL);
         mLocationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
-        if (mLocationManager.isProviderEnabled(_provider)) {
-            mLocationManager.requestLocationUpdates(_provider, 0, 0, _locationListener);
+        if (mLocationManager.isProviderEnabled(provider)) {
+            mLocationManager.requestLocationUpdates(provider, 0, 0, _locationListener);
         } else {
             Toast.makeText(context, "please turn on positioning stuff and give permissions", Toast.LENGTH_LONG).show();
         }
     }
 
-    private static void updateMovementProfile(Location location) {
-        Log.e("LOCATION", "new location");
+    private static void handleLocation(Location location) {
         Coordinate coordinate = new Coordinate(location.getLatitude(), location.getLongitude());
-        Geometry geometry = new GeometryFactory().createPoint(coordinate);
-        CoordinateContentProvider contentProvider = new CoordinateContentProvider(mContext);
+        Geometry geometry = mGeometryFactory.createPoint(coordinate);
 
         //check if new coordinate is out of current movement profile. If yes, add it
-        if (!contentProvider.getConvexHull().contains(geometry)) {
-            CoordinateDTO newCoordinate = contentProvider.persist(coordinate);
+        if (!mContentProvider.getConvexHull().intersects(geometry)) {
+            mContentProvider.persist(coordinate);
         }
-        List<CoordinateDTO> coordinates = contentProvider.getAllCoordinates();
+        List<CoordinateDTO> coordinates = mContentProvider.getAllCoordinates();
         //check coordinates of movement profile for their expiration
         for (CoordinateDTO coordinateDTO : coordinates) {
             if (System.currentTimeMillis() > coordinateDTO.getInsertionDate() + mTimeToLive) {
-                contentProvider.deleteCoordinate(coordinateDTO);
+                mContentProvider.deleteCoordinate(coordinateDTO);
             }
         }
 
-        stopLocationListener();
+        removeLocationListeners();
     }
 
-    public static void stopLocationListener() {
+    public static void removeLocationListeners() {
         if (mLocationManager != null) {
             mLocationManager.removeUpdates(_locationListener);
         }
-
-        if (mContext != null) {
-            Toast.makeText(mContext, "provider stopped", Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    public static Location getLastLocation() {
-        return mLastLocation;
     }
 }
