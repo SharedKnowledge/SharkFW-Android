@@ -1,4 +1,4 @@
-package net.sharksystem.android.protocols.routing.location;
+package net.sharksystem.android.protocols.routing.location_to_be_implemented;
 
 import android.app.Service;
 import android.content.Context;
@@ -9,8 +9,6 @@ import android.os.IBinder;
 import android.util.Log;
 import android.view.Gravity;
 import android.widget.Toast;
-
-import net.sharksystem.android.protocols.routing.service.MovingRouterLocationListener;
 
 // TODO
 // -----------------------VARIABLES-----------------------------------------------------------------

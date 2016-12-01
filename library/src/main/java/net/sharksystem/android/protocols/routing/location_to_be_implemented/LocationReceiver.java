@@ -1,4 +1,4 @@
-package net.sharksystem.android.protocols.routing.location;
+package net.sharksystem.android.protocols.routing.location_to_be_implemented;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -10,12 +10,10 @@ import android.os.Bundle;
 import android.util.Log;
 import android.widget.Toast;
 
-import com.vividsolutions.jts.algorithm.ConvexHull;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.GeometryFactory;
 
-import net.sharksystem.android.protocols.routing.RouterKP;
 import net.sharksystem.android.protocols.routing.db.CoordinateContentProvider;
 import net.sharksystem.android.protocols.routing.db.CoordinateDTO;
 
