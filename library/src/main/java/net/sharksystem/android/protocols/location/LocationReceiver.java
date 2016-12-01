@@ -15,6 +15,7 @@ import com.vividsolutions.jts.geom.GeometryFactory;
 
 import java.util.List;
 
+
 public class LocationReceiver extends BroadcastReceiver {
 
     public static final String ACTION_REFRESH_SCHEDULE_ALARM = "net.sharksystem.android.ACTION_REFRESH_SCHEDULE_ALARM";;
@@ -58,11 +59,7 @@ public class LocationReceiver extends BroadcastReceiver {
         String provider = LocationManager.NETWORK_PROVIDER;
         mTimeToLive = intent.getLongExtra(TAG_COORDINATE_TTL, LocationService.DEFAULT_COORDINATE_TTL);
         mLocationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
-        if (mLocationManager.isProviderEnabled(provider)) {
-            mLocationManager.requestLocationUpdates(provider, 0, 0, _locationListener);
-        } else {
-            Toast.makeText(context, "please turn on positioning stuff and give permissions", Toast.LENGTH_LONG).show();
-        }
+        mLocationManager.requestLocationUpdates(provider, 0, 0, _locationListener);
     }
 
     private static void handleLocation(Location location) {
